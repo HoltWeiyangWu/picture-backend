@@ -1,9 +1,10 @@
 package holt.picture.controller;
 
 
-import org.mybatis.spring.annotation.MapperScan;
+import holt.picture.common.BaseResponse;
+import holt.picture.common.ResultUtils;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -11,11 +12,10 @@ import org.springframework.web.bind.annotation.RestController;
  * @date 2025/3/30 22:25
  */
 @RestController
-@MapperScan("holt.picture.mapper")
+@RequestMapping("/")
 public class BasicController {
-    @RequestMapping("/user")
-    @ResponseBody
-    public String user() {
-        return "user";
+    @GetMapping("/test")
+    public BaseResponse<String> test() {
+        return ResultUtils.success("Hello World");
     }
 }

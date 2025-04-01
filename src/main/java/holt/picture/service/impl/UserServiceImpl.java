@@ -8,10 +8,15 @@ import holt.picture.exception.ErrorCode;
 import holt.picture.exception.ThrowUtils;
 import holt.picture.model.User;
 import holt.picture.model.UserRoleEnum;
+import holt.picture.model.vo.LoginUserVO;
 import holt.picture.service.UserService;
 import holt.picture.mapper.UserMapper;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
+
+import static holt.picture.constant.UserConstant.USER_LOGIN_STATE;
 
 /**
 * @author Weiyang Wu
@@ -20,7 +25,9 @@ import org.springframework.util.DigestUtils;
 @Service
 public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     implements UserService {
-
+    /**
+     * Register user with credentials
+     */
     @Override
     public long userRegister(String account, String password, String checkPassword) {
         // 1. Parameter validation
@@ -54,6 +61,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         return user.getId();
     }
 
+    /**
+     * Encrypt password with MD5
+     */
     @Override
     public String getEncryptPassword(String userPassword) {
         // Add salt
@@ -61,6 +71,45 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         return DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
     }
 
+    /**
+     * Log in user with credentials and set session cookie
+     */
+    @Override
+    public LoginUserVO userLogin(String userAccount, String userPassword, HttpServletRequest request) {
+        // 1. Parameter validation
+        ThrowUtils.throwIf(StrUtil.hasBlank(userAccount, userPassword),
+                new BusinessException(ErrorCode.PARAMS_ERROR, "Empty input"));
+        ThrowUtils.throwIf(userAccount.length() < 4,
+                new BusinessException(ErrorCode.PARAMS_ERROR, "Account length less than 4"));
+        ThrowUtils.throwIf(userPassword.length() < 8,
+                new BusinessException(ErrorCode.PARAMS_ERROR, "Password length less than 8"));
+
+        // 2. Check if the user exists
+        String encryptedPassword = getEncryptPassword(userPassword);
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("userAccount", userAccount);
+        queryWrapper.eq("userPassword", encryptedPassword);
+        User user = this.baseMapper.selectOne(queryWrapper);
+        // User does not exist
+        ThrowUtils.throwIf(user==null,
+                new BusinessException(ErrorCode.PARAMS_ERROR, "User does not exist or incorrect password"));
+        // 3. Record user login state
+        request.getSession().setAttribute(USER_LOGIN_STATE, user);
+        return this.getLoginUserVO(user);
+    }
+
+    /**
+     * Convert User object to user view object
+     */
+    @Override
+    public LoginUserVO getLoginUserVO(User user) {
+        if (user == null) {
+            return null;
+        }
+        LoginUserVO loginUserVO = new LoginUserVO();
+        BeanUtils.copyProperties(user, loginUserVO);
+        return loginUserVO;
+    }
 }
 
 

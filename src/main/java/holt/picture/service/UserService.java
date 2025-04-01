@@ -29,4 +29,9 @@ public interface UserService extends IService<User> {
      * Convert User object to user view object
      */
     LoginUserVO getLoginUserVO(User user);
+
+    /**
+     * Get insensitive user information based on session cookie
+     */
+    LoginUserVO getLoginUserVO(HttpServletRequest request);
 }

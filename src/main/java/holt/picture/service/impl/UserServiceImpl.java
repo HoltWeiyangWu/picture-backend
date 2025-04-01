@@ -110,6 +110,24 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         BeanUtils.copyProperties(user, loginUserVO);
         return loginUserVO;
     }
+
+    /**
+     * Get insensitive user information based on session cookie
+     */
+    @Override
+    public LoginUserVO getLoginUserVO(HttpServletRequest request) {
+        // Check if the current user has logged in
+        Object userObject = request.getSession().getAttribute(USER_LOGIN_STATE);
+        User user = (User) userObject;
+        ThrowUtils.throwIf(user == null || user.getId() == null,
+                new BusinessException(ErrorCode.NOT_LOGIN_ERROR, "User has not yet logged in"));
+        long userId = user.getId();
+        user = getById(userId);
+        // It may be the case where the user is deleted while the session is valid
+        ThrowUtils.throwIf(user == null,
+                new BusinessException(ErrorCode.NOT_LOGIN_ERROR, "User has not yet logged in"));
+        return getLoginUserVO(user);
+    }
 }
 
 

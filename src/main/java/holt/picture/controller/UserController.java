@@ -10,10 +10,7 @@ import holt.picture.model.vo.LoginUserVO;
 import holt.picture.service.UserService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * Controller layer for user operations
@@ -49,6 +46,15 @@ public class UserController {
         String account = request.getUserAccount();
         String password = request.getUserPassword();
         LoginUserVO loginUserVO = userService.userLogin(account, password, httpRequest);
+        return ResultUtils.success(loginUserVO);
+    }
+
+    /**
+     * Get insensitive user information based on session cookie
+     */
+    @GetMapping("get/login")
+    public BaseResponse<LoginUserVO> getLoginUser(HttpServletRequest httpRequest) {
+        LoginUserVO loginUserVO = userService.getLoginUserVO(httpRequest);
         return ResultUtils.success(loginUserVO);
     }
 }

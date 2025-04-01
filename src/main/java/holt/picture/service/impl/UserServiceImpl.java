@@ -128,6 +128,21 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
                 new BusinessException(ErrorCode.NOT_LOGIN_ERROR, "User has not yet logged in"));
         return getLoginUserVO(user);
     }
+
+    /**
+     * Log out user and remove session
+     */
+    @Override
+    public boolean userLogout(HttpServletRequest request) {
+        // Check if the current user has logged in
+        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+        ThrowUtils.throwIf(userObj==null,
+                new BusinessException(ErrorCode.OPERATION_ERROR, "User is not logged in but is attempting to log out"));
+        // Remove user state
+        request.getSession().removeAttribute(USER_LOGIN_STATE);
+        return true;
+
+    }
 }
 
 

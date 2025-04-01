@@ -33,3 +33,5 @@ springdoc:
       packages-to-scan: holt.picture.controller
 knife4j:
   enable: true
+  setting:
+    language: en

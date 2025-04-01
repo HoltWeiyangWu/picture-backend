@@ -57,4 +57,14 @@ public class UserController {
         LoginUserVO loginUserVO = userService.getLoginUserVO(httpRequest);
         return ResultUtils.success(loginUserVO);
     }
+
+    /**
+     * Log out user and remove session
+     */
+    @PostMapping("/logout")
+    public BaseResponse<Boolean> logout(HttpServletRequest httpRequest) {
+        ThrowUtils.throwIf(httpRequest==null, ErrorCode.PARAMS_ERROR);
+        boolean result = userService.userLogout(httpRequest);
+        return ResultUtils.success(result);
+    }
 }

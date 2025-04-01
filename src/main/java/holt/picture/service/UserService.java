@@ -34,4 +34,9 @@ public interface UserService extends IService<User> {
      * Get insensitive user information based on session cookie
      */
     LoginUserVO getLoginUserVO(HttpServletRequest request);
+
+    /**
+     * Log out user and remove session
+     */
+    boolean userLogout(HttpServletRequest request);
 }

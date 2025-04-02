@@ -1,5 +1,6 @@
 package holt.picture.model;
 
+import holt.picture.constant.UserConstant;
 import lombok.Getter;
 
 /**
@@ -9,8 +10,8 @@ import lombok.Getter;
  */
 @Getter
 public enum UserRoleEnum {
-    USER("User", "user"),
-    ADMIN("Administrator", "admin");
+    USER("User", UserConstant.USER_ROLE),
+    ADMIN("Administrator", UserConstant.ADMIN_ROLE);
 
     private final String text;
     private final String value;

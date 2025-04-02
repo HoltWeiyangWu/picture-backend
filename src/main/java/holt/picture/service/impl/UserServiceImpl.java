@@ -115,7 +115,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
      * Get insensitive user information based on session cookie
      */
     @Override
-    public LoginUserVO getLoginUserVO(HttpServletRequest request) {
+    public User getLoginUser(HttpServletRequest request) {
         // Check if the current user has logged in
         Object userObject = request.getSession().getAttribute(USER_LOGIN_STATE);
         User user = (User) userObject;
@@ -126,7 +126,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         // It may be the case where the user is deleted while the session is valid
         ThrowUtils.throwIf(user == null,
                 new BusinessException(ErrorCode.NOT_LOGIN_ERROR, "User has not yet logged in"));
-        return getLoginUserVO(user);
+        return user;
     }
 
     /**

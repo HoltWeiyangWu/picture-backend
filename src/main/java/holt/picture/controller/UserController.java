@@ -1,9 +1,13 @@
 package holt.picture.controller;
 
+import holt.picture.annotation.AuthCheck;
 import holt.picture.common.BaseResponse;
 import holt.picture.common.ResultUtils;
+import holt.picture.constant.UserConstant;
 import holt.picture.exception.ErrorCode;
 import holt.picture.exception.ThrowUtils;
+import holt.picture.model.User;
+import holt.picture.model.UserRoleEnum;
 import holt.picture.model.dto.UserLoginRequest;
 import holt.picture.model.dto.UserRegisterRequest;
 import holt.picture.model.vo.LoginUserVO;
@@ -52,9 +56,11 @@ public class UserController {
     /**
      * Get insensitive user information based on session cookie
      */
+//    @AuthCheck(requiredRole = UserConstant.ADMIN_ROLE)
     @GetMapping("get/login")
     public BaseResponse<LoginUserVO> getLoginUser(HttpServletRequest httpRequest) {
-        LoginUserVO loginUserVO = userService.getLoginUserVO(httpRequest);
+        User loginUser = userService.getLoginUser(httpRequest);
+        LoginUserVO loginUserVO = userService.getLoginUserVO(loginUser);
         return ResultUtils.success(loginUserVO);
     }
 

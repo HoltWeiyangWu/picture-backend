@@ -1,26 +1,20 @@
-package holt.picture.model.vo;
+package holt.picture.dto;
 
 import lombok.Data;
 
 import java.io.Serializable;
-import java.util.Date;
 
 /**
- * User view object without sensitive information
+ * Request object for changing user information
  * @author Weiyang Wu
- * @date 2025/4/1 20:53
+ * @date 2025/4/2 15:48
  */
 @Data
-public class LoginUserVO implements Serializable {
+public class UserUpdateRequest implements Serializable {
     /**
      * id
      */
     private Long id;
-
-    /**
-     * account
-     */
-    private String userAccount;
 
     /**
      * user name
@@ -41,14 +35,4 @@ public class LoginUserVO implements Serializable {
      * Roles：user/admin
      */
     private String userRole;
-
-    /**
-     * Edit time
-     */
-    private Date editTime;
-
-    /**
-     * Create time
-     */
-    private Date createTime;
 }

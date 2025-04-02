@@ -1,15 +1,12 @@
 package holt.picture.controller;
 
-import holt.picture.annotation.AuthCheck;
 import holt.picture.common.BaseResponse;
 import holt.picture.common.ResultUtils;
-import holt.picture.constant.UserConstant;
 import holt.picture.exception.ErrorCode;
 import holt.picture.exception.ThrowUtils;
 import holt.picture.model.User;
-import holt.picture.model.UserRoleEnum;
-import holt.picture.model.dto.UserLoginRequest;
-import holt.picture.model.dto.UserRegisterRequest;
+import holt.picture.dto.UserLoginRequest;
+import holt.picture.dto.UserRegisterRequest;
 import holt.picture.model.vo.LoginUserVO;
 import holt.picture.service.UserService;
 import jakarta.annotation.Resource;

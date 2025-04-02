@@ -1,9 +1,14 @@
 package holt.picture.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import holt.picture.dto.UserQueryRequest;
 import holt.picture.model.User;
 import com.baomidou.mybatisplus.extension.service.IService;
 import holt.picture.model.vo.LoginUserVO;
+import holt.picture.model.vo.UserVO;
 import jakarta.servlet.http.HttpServletRequest;
+
+import java.util.List;
 
 /**
 * @author Weiyang Wu
@@ -39,4 +44,19 @@ public interface UserService extends IService<User> {
      * Log out user and remove session
      */
     boolean userLogout(HttpServletRequest request);
+
+    /**
+     * Get user view object from user object
+     */
+    UserVO getUserVO(User user);
+
+    /**
+     * Get a list of user view objects from user objects
+     */
+    List<UserVO> getUserVOList(List<User> users);
+
+    /**
+     * Customised query wrapper to handle SQL queries
+     */
+    QueryWrapper<User> getUserQueryWrapper(UserQueryRequest queryRequest);
 }

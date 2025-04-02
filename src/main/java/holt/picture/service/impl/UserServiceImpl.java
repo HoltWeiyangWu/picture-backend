@@ -1,20 +1,27 @@
 package holt.picture.service.impl;
 
+import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import holt.picture.dto.UserQueryRequest;
 import holt.picture.exception.BusinessException;
 import holt.picture.exception.ErrorCode;
 import holt.picture.exception.ThrowUtils;
 import holt.picture.model.User;
 import holt.picture.model.UserRoleEnum;
 import holt.picture.model.vo.LoginUserVO;
+import holt.picture.model.vo.UserVO;
 import holt.picture.service.UserService;
 import holt.picture.mapper.UserMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import static holt.picture.constant.UserConstant.USER_LOGIN_STATE;
 
@@ -141,8 +148,61 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         // Remove user state
         request.getSession().removeAttribute(USER_LOGIN_STATE);
         return true;
+    }
+
+    /**
+     * Get user view object from user object
+     */
+    @Override
+    public UserVO getUserVO(User user) {
+        if (user == null) {
+            return null;
+        }
+        UserVO userVO = new UserVO();
+        BeanUtils.copyProperties(user, userVO);
+        return userVO;
+    }
+
+    /**
+     * Get a list of user view objects from user objects
+     */
+    @Override
+    public List<UserVO> getUserVOList(List<User> users) {
+        if (users == null || users.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return users.stream()
+                .map(this::getUserVO)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Customised query wrapper to handle SQL queries
+     */
+    @Override
+    public QueryWrapper<User> getUserQueryWrapper(UserQueryRequest queryRequest) {
+        ThrowUtils.throwIf(queryRequest==null,
+                new BusinessException(ErrorCode.PARAMS_ERROR, "Query request is null"));
+        Long id = queryRequest.getId();
+        String userAccount = queryRequest.getUserAccount();
+        String userName = queryRequest.getUserName();
+        String userProfile = queryRequest.getUserProfile();
+        String userRole = queryRequest.getUserRole();
+        String sortOrder = queryRequest.getSortOrder();
+        String sortField = queryRequest.getSortField();
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        // Exact match
+        queryWrapper.eq(ObjUtil.isNotNull(id),"id", id);
+        queryWrapper.eq(ObjUtil.isNotNull(userRole),"userRole", userRole);
+        // Approximate search
+        queryWrapper.like(StrUtil.isNotBlank(userAccount),"userAccount", userAccount);
+        queryWrapper.like(StrUtil.isNotBlank(userName),"userName", userName);
+        queryWrapper.like(StrUtil.isNotBlank(userProfile),"userProfile", userProfile);
+        queryWrapper.orderBy(StrUtil.isNotEmpty(sortField),sortOrder.equals("ascend"), sortField);
+        return queryWrapper;
 
     }
+
 }
 
 

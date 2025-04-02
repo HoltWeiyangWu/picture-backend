@@ -1,17 +1,12 @@
 package holt.picture.model.vo;
 
-import lombok.Data;
-
-import java.io.Serializable;
 import java.util.Date;
 
 /**
- * User view object without sensitive information
  * @author Weiyang Wu
- * @date 2025/4/1 20:53
+ * @date 2025/4/2 15:55
  */
-@Data
-public class LoginUserVO implements Serializable {
+public class UserVO {
     /**
      * id
      */
@@ -41,11 +36,6 @@ public class LoginUserVO implements Serializable {
      * Roles：user/admin
      */
     private String userRole;
-
-    /**
-     * Edit time
-     */
-    private Date editTime;
 
     /**
      * Create time

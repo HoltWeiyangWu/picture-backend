@@ -1,7 +1,6 @@
 package holt.picture.aop;
 
 import holt.picture.annotation.AuthCheck;
-import holt.picture.exception.BusinessException;
 import holt.picture.exception.ErrorCode;
 import holt.picture.exception.ThrowUtils;
 import holt.picture.model.User;

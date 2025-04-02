@@ -1,4 +1,4 @@
-package holt.picture.model.dto;
+package holt.picture.dto;
 
 import lombok.Data;
 
@@ -6,6 +6,7 @@ import java.io.Serial;
 import java.io.Serializable;
 
 /**
+ * Request object for user login
  * @author Weiyang Wu
  * @date 2025/4/1 19:50
  */

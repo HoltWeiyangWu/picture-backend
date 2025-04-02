@@ -1,17 +1,20 @@
-package holt.picture.model.vo;
+package holt.picture.dto;
 
+import holt.picture.common.PageRequest;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
-import java.util.Date;
 
 /**
- * User view object without sensitive information
+ * Request object for requesting a page of users
+ * Each field of this class represents a query field
  * @author Weiyang Wu
- * @date 2025/4/1 20:53
+ * @date 2025/4/2 15:50
  */
+@EqualsAndHashCode(callSuper = true)
 @Data
-public class LoginUserVO implements Serializable {
+public class UserQueryRequest extends PageRequest implements Serializable {
     /**
      * id
      */
@@ -28,11 +31,6 @@ public class LoginUserVO implements Serializable {
     private String userName;
 
     /**
-     * avatar
-     */
-    private String userAvatar;
-
-    /**
      * profile
      */
     private String userProfile;
@@ -41,14 +39,4 @@ public class LoginUserVO implements Serializable {
      * Roles：user/admin
      */
     private String userRole;
-
-    /**
-     * Edit time
-     */
-    private Date editTime;
-
-    /**
-     * Create time
-     */
-    private Date createTime;
 }

@@ -1,12 +1,16 @@
 package holt.picture.model.vo;
 
+import lombok.Data;
+
+import java.io.Serializable;
 import java.util.Date;
 
 /**
  * @author Weiyang Wu
  * @date 2025/4/2 15:55
  */
-public class UserVO {
+@Data
+public class UserVO implements Serializable {
     /**
      * id
      */

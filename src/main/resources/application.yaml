@@ -10,6 +10,8 @@ spring:
     url: jdbc:mysql://localhost:3306/picture
     username: root
     password: wuweiyang
+#  profiles:
+#    active: local
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: false
@@ -35,3 +37,12 @@ knife4j:
   enable: true
   setting:
     language: en
+
+
+aws:
+  s3:
+    client:
+      region: xxxx
+      bucket: xxxx
+      access-key: xxxx
+      secret-key: xxxx

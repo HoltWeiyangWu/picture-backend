@@ -1,4 +1,4 @@
-package holt.picture.dto;
+package holt.picture.model.dto;
 
 import holt.picture.common.PageRequest;
 import lombok.Data;

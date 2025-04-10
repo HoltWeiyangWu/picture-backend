@@ -4,7 +4,7 @@ import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import holt.picture.dto.UserQueryRequest;
+import holt.picture.model.dto.UserQueryRequest;
 import holt.picture.exception.BusinessException;
 import holt.picture.exception.ErrorCode;
 import holt.picture.exception.ThrowUtils;

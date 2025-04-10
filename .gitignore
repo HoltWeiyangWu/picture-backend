@@ -1,3 +1,5 @@
+
+
 HELP.md
 target/
 !.mvn/wrapper/maven-wrapper.jar
@@ -31,3 +33,5 @@ build/
 
 ### VS Code ###
 .vscode/
+### config file ###
+application-local.yaml

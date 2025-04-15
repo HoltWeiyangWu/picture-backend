@@ -1,7 +1,7 @@
 package holt.picture.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import holt.picture.model.dto.UserQueryRequest;
+import holt.picture.model.dto.user.UserQueryRequest;
 import holt.picture.model.User;
 import com.baomidou.mybatisplus.extension.service.IService;
 import holt.picture.model.vo.LoginUserVO;

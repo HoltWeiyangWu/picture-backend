@@ -1,4 +1,4 @@
-package holt.picture.model.dto;
+package holt.picture.model.dto.user;
 
 import lombok.Data;
 

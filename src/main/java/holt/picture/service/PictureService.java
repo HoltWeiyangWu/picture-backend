@@ -1,10 +1,14 @@
 package holt.picture.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import holt.picture.model.Picture;
 import com.baomidou.mybatisplus.extension.service.IService;
 import holt.picture.model.User;
+import holt.picture.model.dto.file.PictureQueryRequest;
 import holt.picture.model.dto.file.PictureUploadRequest;
 import holt.picture.model.vo.PictureVO;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
@@ -14,4 +18,8 @@ import org.springframework.web.multipart.MultipartFile;
 public interface PictureService extends IService<Picture> {
     PictureVO uploadPicture(MultipartFile multipartFile, PictureUploadRequest pictureUploadRequest,
                             User logiinUser);
+    QueryWrapper<Picture> getPictureQueryWrapper(PictureQueryRequest pictureQueryRequest);
+    PictureVO getPictureVO(Picture picture, HttpServletRequest request);
+    Page<PictureVO> getPictureVOPage(Page<Picture> picturePage, HttpServletRequest request);
+    void validPicture(Picture picture);
 }

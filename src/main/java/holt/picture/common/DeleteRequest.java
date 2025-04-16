@@ -6,6 +6,7 @@ import java.io.Serial;
 import java.io.Serializable;
 
 /**
+ * General type of delete request for different objects
  * @author Weiyang Wu
  * @date 2025/3/31 14:28
  */

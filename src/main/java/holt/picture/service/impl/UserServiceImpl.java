@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 import static holt.picture.constant.UserConstant.USER_LOGIN_STATE;
 
 /**
+ * Implementation details of operations to user objects
 * @author Weiyang Wu
 * @date 2025-04-01 17:36:37
 */
@@ -201,6 +202,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         queryWrapper.orderBy(StrUtil.isNotEmpty(sortField),sortOrder.equals("ascend"), sortField);
         return queryWrapper;
 
+    }
+
+    @Override
+    public Boolean isAdmin(User user) {
+        boolean isLogin = user != null;
+        return isLogin && user.getUserRole().equals(UserRoleEnum.ADMIN.getValue());
     }
 
 }

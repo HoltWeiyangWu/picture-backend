@@ -10,11 +10,9 @@ import holt.picture.constant.UserConstant;
 import holt.picture.exception.ErrorCode;
 import holt.picture.exception.ThrowUtils;
 import holt.picture.model.Picture;
+import holt.picture.model.PictureReviewStatusEnum;
 import holt.picture.model.User;
-import holt.picture.model.dto.file.PictureEditRequest;
-import holt.picture.model.dto.file.PictureQueryRequest;
-import holt.picture.model.dto.file.PictureUpdateRequest;
-import holt.picture.model.dto.file.PictureUploadRequest;
+import holt.picture.model.dto.file.*;
 import holt.picture.model.vo.PictureTagCategory;
 import holt.picture.model.vo.PictureVO;
 import holt.picture.service.PictureService;
@@ -48,7 +46,6 @@ public class PictureController {
      * Upload a picture to AWS S3 and record its information to database
      */
     @PostMapping("/upload")
-    @AuthCheck(requiredRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<PictureVO> uploadPicture(
             @RequestPart("file") MultipartFile multipartFile,
             PictureUploadRequest pictureUploadRequest,
@@ -82,7 +79,8 @@ public class PictureController {
      */
     @PostMapping("/update")
     @AuthCheck(requiredRole = UserConstant.ADMIN_ROLE)
-    public BaseResponse<Boolean> updatePicture(@RequestBody PictureUpdateRequest pictureUpdateRequest) {
+    public BaseResponse<Boolean> updatePicture(@RequestBody PictureUpdateRequest pictureUpdateRequest,
+                                               HttpServletRequest request) {
         ThrowUtils.throwIf(pictureUpdateRequest == null || pictureUpdateRequest.getId() <= 0,
                 ErrorCode.PARAMS_ERROR);
         Picture picture = new Picture();
@@ -95,7 +93,9 @@ public class PictureController {
         // Check if the picture already exists
         Picture oldPicture = pictureService.getById(id);
         ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR);
-
+        // Add picture review feature
+        User loginUser = userService.getLoginUser(request);
+        pictureService.fillReviewParams(picture, loginUser);
         boolean result = pictureService.updateById(picture);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
         return ResultUtils.success(true);
@@ -120,6 +120,8 @@ public class PictureController {
         ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR);
         User loginUser = userService.getLoginUser(request);
         checkIfOwnerOrAdmin(oldPicture, loginUser);
+        // Add picture review feature
+        pictureService.fillReviewParams(picture, loginUser);
         boolean result = pictureService.updateById(picture);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
         return ResultUtils.success(true);
@@ -172,6 +174,7 @@ public class PictureController {
         long size = pictureQueryRequest.getPageSize();
         // Limit what the user can query about in terms of size
         ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
+        pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
         Page<Picture> picturePage = pictureService.page(new Page<>(current, size),
                 pictureService.getPictureQueryWrapper(pictureQueryRequest));
         return ResultUtils.success(pictureService.getPictureVOPage(picturePage, request));
@@ -188,6 +191,19 @@ public class PictureController {
         pictureTagCategory.setTagList(tagList);
         pictureTagCategory.setCategoryList(categoryList);
         return ResultUtils.success(pictureTagCategory);
+    }
+
+    /**
+     * Review a picture, setting the picture's status to pass/rejected/reviewing (only for admin)
+     */
+    @GetMapping("/review")
+    @AuthCheck(requiredRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<Boolean> reviewPicture(@RequestBody PictureReviewRequest pictureReviewRequest,
+                                               HttpServletRequest request) {
+        ThrowUtils.throwIf(pictureReviewRequest == null, ErrorCode.PARAMS_ERROR);
+        User loginUser = userService.getLoginUser(request);
+        pictureService.reviewPicture(pictureReviewRequest, loginUser);
+        return ResultUtils.success(true);
     }
 
     /**

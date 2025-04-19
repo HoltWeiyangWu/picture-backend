@@ -6,12 +6,15 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import holt.picture.exception.BusinessException;
 import holt.picture.exception.ErrorCode;
 import holt.picture.exception.ThrowUtils;
 import holt.picture.manager.FileManager;
 import holt.picture.model.Picture;
+import holt.picture.model.PictureReviewStatusEnum;
 import holt.picture.model.User;
 import holt.picture.model.dto.file.PictureQueryRequest;
+import holt.picture.model.dto.file.PictureReviewRequest;
 import holt.picture.model.dto.file.PictureUploadRequest;
 import holt.picture.model.vo.PictureVO;
 import holt.picture.model.vo.UserVO;
@@ -20,6 +23,7 @@ import holt.picture.mapper.PictureMapper;
 import holt.picture.service.UserService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.Date;
@@ -53,15 +57,18 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         }
         // Validate picture's existence if updating
         if (pictureId != null) {
-            boolean isExisted = this.lambdaQuery()
-                    .eq(Picture::getId, pictureId)
-                    .exists();
-            ThrowUtils.throwIf(!isExisted, ErrorCode.NOT_FOUND_ERROR,"Picture does not exist");
+            Picture existingPicture = this.getById(pictureId);
+            ThrowUtils.throwIf(existingPicture == null, ErrorCode.NOT_FOUND_ERROR,
+                    "Picture does not exist");
+            // Only its creator or admin can edit it
+            if (!existingPicture.getCreatorId().equals(loginUser.getId()) && !userService.isAdmin(loginUser)) {
+                throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "You are not authorized to edit this file");
+            }
         }
-
         String uploadPathPrefix = String.format("public/%s", loginUser.getId());
         Picture picture = fileManager.uploadPicture(multipartFile, uploadPathPrefix);
         picture.setCreatorId(loginUser.getId());
+        fillReviewParams(picture, loginUser);
         // Re-new properties in case of update
         if (pictureId != null) {
             picture.setId(pictureId);
@@ -92,6 +99,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         Long creatorId = pictureQueryRequest.getCreatorId();
         String sortField = pictureQueryRequest.getSortField();
         String sortOrder = pictureQueryRequest.getSortOrder();
+        Integer reviewStatus = pictureQueryRequest.getReviewStatus();
+        String reviewMessage = pictureQueryRequest.getReviewMessage();
+        Long reviewerId = pictureQueryRequest.getReviewerId();
 
         // Find text from name or introduction
         if (StrUtil.isNotBlank(searchText)) {
@@ -111,7 +121,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         queryWrapper.eq(ObjUtil.isNotEmpty(picHeight), "picHeight", picHeight);
         queryWrapper.eq(ObjUtil.isNotEmpty(picSize), "picSize", picSize);
         queryWrapper.eq(ObjUtil.isNotEmpty(picScale), "picScale", picScale);
-
+        queryWrapper.eq(ObjUtil.isNotEmpty(reviewStatus), "reviewStatus", reviewStatus);
+        queryWrapper.like(StrUtil.isNotBlank(reviewMessage), "reviewMessage", reviewMessage);
+        queryWrapper.eq(ObjUtil.isNotEmpty(reviewerId), "reviewerId", reviewerId);
         // Query to tags (JSON array)
         if (CollUtil.isNotEmpty(tags)) {
             for (String tag: tags) {
@@ -194,6 +206,50 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         if (StrUtil.isNotBlank(introduction)) {
             ThrowUtils.throwIf(introduction.length() > 800, ErrorCode.PARAMS_ERROR,
                     "Introduction is too long");
+        }
+    }
+
+    /**
+     * Set review status for a particular picture (only for admin)
+     */
+    @Override
+    public void reviewPicture(PictureReviewRequest pictureReviewRequest, User loginUser) {
+        // Validate inputs
+        Long id = pictureReviewRequest.getId();
+        Integer reviewStatus = pictureReviewRequest.getReviewStatus();
+        PictureReviewStatusEnum reviewStatusEnum = PictureReviewStatusEnum.getEnumByValue(reviewStatus);
+        if (id == null || reviewStatusEnum == null || reviewStatusEnum.equals(PictureReviewStatusEnum.REVIEWING)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        // Check if the picture exists
+        Picture oldPicture = this.getById(id);
+        ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR, "Picture not found");
+        // Check if the previous review status is the same
+        if (oldPicture.getReviewStatus().equals(reviewStatus)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "Picture is already reviewed as such");
+        }
+        // Update review status
+        Picture pictureToUpdate = new Picture();
+        BeanUtils.copyProperties(pictureReviewRequest, pictureToUpdate);
+        pictureToUpdate.setReviewerId(loginUser.getId());
+        pictureToUpdate.setReviewTime(new Date());
+        boolean result = this.saveOrUpdate(pictureToUpdate);
+        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "Failed to save the picture review");
+    }
+
+    /**
+     * Helper function to fill review parameters based on the requester's role
+     */
+    @Override
+    public void fillReviewParams(Picture picture, User loginUser) {
+        if (userService.isAdmin(loginUser)) {
+            picture.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
+            picture.setReviewerId(loginUser.getId());
+            picture.setReviewMessage("Created/Edited by admin");
+            picture.setReviewTime(new Date());
+        } else {
+            // Non-admin user should wait for review before uploading/editing
+            picture.setReviewStatus(PictureReviewStatusEnum.REVIEWING.getValue());
         }
     }
 }

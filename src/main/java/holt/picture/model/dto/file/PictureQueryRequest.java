@@ -77,6 +77,21 @@ public class PictureQueryRequest extends PageRequest implements Serializable {
      */
     private String searchText;
 
+    /**
+     * Status: 0-Reviewing; 1-Pass; 2-Rejected
+     */
+    private Integer reviewStatus;
+
+    /**
+     * Review message/details
+     */
+    private String reviewMessage;
+
+    /**
+     * Reviewer's ID
+     */
+    private Long reviewerId;
+
     @Serial
     private static final long serialVersionUID = 1L;
 }

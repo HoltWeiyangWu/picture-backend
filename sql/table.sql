@@ -43,3 +43,12 @@ create table if not exists picture
 ) comment 'picture' collate = utf8mb4_unicode_ci;
 
 
+ALTER TABLE picture
+    -- Add new field for review
+    ADD COLUMN reviewStatus INT DEFAULT 0 NOT NULL COMMENT 'Review status：0-Reviewing; 1-Pass; 2-Rejected',
+    ADD COLUMN reviewMessage VARCHAR(512) NULL COMMENT 'Review details',
+    ADD COLUMN reviewerId BIGINT NULL COMMENT 'Reviewer ID',
+    ADD COLUMN reviewTime DATETIME NULL COMMENT 'Review time';
+
+-- Create an index on review status
+CREATE INDEX idx_reviewStatus ON picture (reviewStatus);

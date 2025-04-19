@@ -6,6 +6,7 @@ import holt.picture.model.Picture;
 import com.baomidou.mybatisplus.extension.service.IService;
 import holt.picture.model.User;
 import holt.picture.model.dto.file.PictureQueryRequest;
+import holt.picture.model.dto.file.PictureReviewRequest;
 import holt.picture.model.dto.file.PictureUploadRequest;
 import holt.picture.model.vo.PictureVO;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,4 +23,6 @@ public interface PictureService extends IService<Picture> {
     PictureVO getPictureVO(Picture picture, HttpServletRequest request);
     Page<PictureVO> getPictureVOPage(Page<Picture> picturePage, HttpServletRequest request);
     void validPicture(Picture picture);
+    void reviewPicture(PictureReviewRequest pictureReviewRequest, User loginUser);
+    void fillReviewParams(Picture picture, User loginUser);
 }

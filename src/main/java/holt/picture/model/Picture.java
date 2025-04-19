@@ -95,6 +95,26 @@ public class Picture implements Serializable {
     @TableLogic
     private Integer isDeleted;
 
+    /**
+     * Status: 0-Reviewing; 1-Pass; 2-Rejected
+     */
+    private Integer reviewStatus;
+
+    /**
+     * Review message/details
+     */
+    private String reviewMessage;
+
+    /**
+     * Reviewer's ID
+     */
+    private Long reviewerId;
+
+    /**
+     * Review time
+     */
+    private Date reviewTime;
+
     @Serial
     @TableField(exist = false)
     private static final long serialVersionUID = 1L;

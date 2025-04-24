@@ -9,7 +9,7 @@ import holt.picture.exception.BusinessException;
 import holt.picture.exception.ErrorCode;
 import holt.picture.exception.ThrowUtils;
 import holt.picture.model.User;
-import holt.picture.model.UserRoleEnum;
+import holt.picture.model.enums.UserRoleEnum;
 import holt.picture.model.vo.LoginUserVO;
 import holt.picture.model.vo.UserVO;
 import holt.picture.service.UserService;

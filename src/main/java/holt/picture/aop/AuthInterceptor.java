@@ -4,7 +4,7 @@ import holt.picture.annotation.AuthCheck;
 import holt.picture.exception.ErrorCode;
 import holt.picture.exception.ThrowUtils;
 import holt.picture.model.User;
-import holt.picture.model.UserRoleEnum;
+import holt.picture.model.enums.UserRoleEnum;
 import holt.picture.service.UserService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;

@@ -28,6 +28,7 @@ import java.util.List;
  */
 @Service
 @Slf4j
+@Deprecated
 public class FileManager {
     @Resource
     private AwsS3ClientConfig awsS3ClientConfig;

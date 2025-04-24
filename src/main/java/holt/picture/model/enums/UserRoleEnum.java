@@ -1,4 +1,4 @@
-package holt.picture.model;
+package holt.picture.model.enums;
 
 import holt.picture.constant.UserConstant;
 import lombok.Getter;

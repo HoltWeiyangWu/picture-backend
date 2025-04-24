@@ -10,7 +10,7 @@ import holt.picture.constant.UserConstant;
 import holt.picture.exception.ErrorCode;
 import holt.picture.exception.ThrowUtils;
 import holt.picture.model.Picture;
-import holt.picture.model.PictureReviewStatusEnum;
+import holt.picture.model.enums.PictureReviewStatusEnum;
 import holt.picture.model.User;
 import holt.picture.model.dto.file.*;
 import holt.picture.model.vo.PictureTagCategory;
@@ -43,7 +43,7 @@ public class PictureController {
     private UserService userService;
 
     /**
-     * Upload a picture to AWS S3 and record its information to database
+     * Upload a picture file to AWS S3 and record its information to database
      */
     @PostMapping("/upload")
     public BaseResponse<PictureVO> uploadPicture(
@@ -53,6 +53,18 @@ public class PictureController {
     ) {
         User loginUser = userService.getLoginUser(request);
         PictureVO pictureVO = pictureService.uploadPicture(multipartFile, pictureUploadRequest, loginUser);
+        return ResultUtils.success(pictureVO);
+    }
+    /**
+     * Upload a picture url to AWS S3 and record its information to database
+     */
+    @PostMapping("/upload/url")
+    public BaseResponse<PictureVO> uploadPictureByUrl(
+            @RequestBody PictureUploadRequest pictureUploadRequest,
+            HttpServletRequest request) {
+        User loginUser = userService.getLoginUser(request);
+        String fileUrl = pictureUploadRequest.getFileUrl();
+        PictureVO pictureVO = pictureService.uploadPicture(fileUrl, pictureUploadRequest, loginUser);
         return ResultUtils.success(pictureVO);
     }
 
@@ -196,7 +208,7 @@ public class PictureController {
     /**
      * Review a picture, setting the picture's status to pass/rejected/reviewing (only for admin)
      */
-    @GetMapping("/review")
+    @PostMapping("/review")
     @AuthCheck(requiredRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> reviewPicture(@RequestBody PictureReviewRequest pictureReviewRequest,
                                                HttpServletRequest request) {

@@ -9,9 +9,11 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import holt.picture.exception.BusinessException;
 import holt.picture.exception.ErrorCode;
 import holt.picture.exception.ThrowUtils;
-import holt.picture.manager.FileManager;
+import holt.picture.manager.upload.FilePictureUpload;
+import holt.picture.manager.upload.PictureUploadTemplate;
+import holt.picture.manager.upload.UrlPictureUpload;
 import holt.picture.model.Picture;
-import holt.picture.model.PictureReviewStatusEnum;
+import holt.picture.model.enums.PictureReviewStatusEnum;
 import holt.picture.model.User;
 import holt.picture.model.dto.file.PictureQueryRequest;
 import holt.picture.model.dto.file.PictureReviewRequest;
@@ -25,7 +27,6 @@ import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -42,13 +43,16 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
     implements PictureService{
 
     @Resource
-    private FileManager fileManager;
+    private FilePictureUpload filePictureUpload;
+
+    @Resource
+    private UrlPictureUpload urlPictureUpload;
 
     @Resource
     private UserService userService;
 
     @Override
-    public PictureVO uploadPicture(MultipartFile multipartFile, PictureUploadRequest pictureUploadRequest, User loginUser) {
+    public PictureVO uploadPicture(Object inputSource, PictureUploadRequest pictureUploadRequest, User loginUser) {
         ThrowUtils.throwIf(loginUser == null, ErrorCode.NO_AUTH_ERROR);
         Long pictureId = null;
         // Check whether the user is adding a picture or updating a picture
@@ -66,7 +70,11 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             }
         }
         String uploadPathPrefix = String.format("public/%s", loginUser.getId());
-        Picture picture = fileManager.uploadPicture(multipartFile, uploadPathPrefix);
+        PictureUploadTemplate pictureUploadTemplate = filePictureUpload;
+        if (inputSource instanceof String) {
+            pictureUploadTemplate = urlPictureUpload;
+        }
+        Picture picture = pictureUploadTemplate.uploadPicture(inputSource, uploadPathPrefix);
         picture.setCreatorId(loginUser.getId());
         fillReviewParams(picture, loginUser);
         // Re-new properties in case of update

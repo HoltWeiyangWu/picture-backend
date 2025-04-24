@@ -1,4 +1,4 @@
-package holt.picture.model;
+package holt.picture.model.enums;
 
 import cn.hutool.core.util.ObjUtil;
 import lombok.Getter;

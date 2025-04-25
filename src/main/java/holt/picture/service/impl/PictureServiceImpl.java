@@ -13,6 +13,7 @@ import holt.picture.manager.upload.FilePictureUpload;
 import holt.picture.manager.upload.PictureUploadTemplate;
 import holt.picture.manager.upload.UrlPictureUpload;
 import holt.picture.model.Picture;
+import holt.picture.model.dto.file.UploadPictureByBatchRequest;
 import holt.picture.model.enums.PictureReviewStatusEnum;
 import holt.picture.model.User;
 import holt.picture.model.dto.file.PictureQueryRequest;
@@ -25,8 +26,14 @@ import holt.picture.mapper.PictureMapper;
 import holt.picture.service.UserService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+
+import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -76,6 +83,10 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         }
         Picture picture = pictureUploadTemplate.uploadPicture(inputSource, uploadPathPrefix);
         picture.setCreatorId(loginUser.getId());
+        // Set a picture name if it is provided through batch uploading
+        if (pictureUploadRequest != null && StrUtil.isNotBlank(pictureUploadRequest.getPicName())) {
+            picture.setName(pictureUploadRequest.getPicName());
+        }
         fillReviewParams(picture, loginUser);
         // Re-new properties in case of update
         if (pictureId != null) {
@@ -259,6 +270,69 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             // Non-admin user should wait for review before uploading/editing
             picture.setReviewStatus(PictureReviewStatusEnum.REVIEWING.getValue());
         }
+    }
+
+
+    /**
+     * Upload a batch of pictures through Bing. Available only to admin.
+     */
+    @Override
+    public Integer uploadPictureByBatch(UploadPictureByBatchRequest batchRequest, User loginUser) {
+        // 1. Validate parameters
+        String searchText = batchRequest.getSearchText();
+        Integer count = batchRequest.getCount();
+        ThrowUtils.throwIf(count > 30, ErrorCode.PARAMS_ERROR, "Can't fetch more than 30 pictures");
+        // 2. Obtain contents
+        String fetchUrl = String.format("https://bing.com/images/async?q=%s&mmasync=1",searchText);
+        String namePrefix = batchRequest.getNamePrefix();
+        if (StrUtil.isBlank(namePrefix)) {
+            namePrefix = searchText;
+        }
+        Document document;
+        try {
+            document = Jsoup.connect(fetchUrl).get();
+        } catch (IOException e) {
+            log.error("Failed to fetch pictures", e);
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "Failed to fetch pictures");
+        }
+
+        // 3. Parse contents
+        // Fetch the whole page of result
+        Element div = document.getElementsByClass("dgControl").first();
+        if (ObjUtil.isNull(div)) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "Failed to fetch elements");
+        }
+        // Select images from the page
+        Elements imgElements = div.select("img.mimg");
+        int uploadCount = 0;
+        for (Element imgElement : imgElements) {
+            String fileUrl = imgElement.attr("src");
+            if (StrUtil.isBlank(fileUrl)) {
+                log.warn("Current URL link is empty: " + fileUrl);
+                continue;
+            }
+            int questionMarkIndex = fileUrl.indexOf("?");
+            // Handle url string issue
+            if (questionMarkIndex > -1) {
+                fileUrl = fileUrl.substring(0, questionMarkIndex);
+            }
+            PictureUploadRequest pictureUploadRequest = new PictureUploadRequest();
+            if (StrUtil.isNotBlank(namePrefix)) {
+                pictureUploadRequest.setPicName(namePrefix + (uploadCount + 1));
+            }
+            try {
+                this.uploadPicture(fileUrl, pictureUploadRequest, loginUser);
+                uploadCount++;
+            } catch (Exception e) {
+                log.error("Failed to upload picture", e);
+                continue;
+            }
+            if (uploadCount >= count) {
+                break;
+            }
+        }
+        // 4. Upload pictures
+        return uploadCount;
     }
 }
 

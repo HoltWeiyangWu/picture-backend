@@ -69,6 +69,20 @@ public class PictureController {
     }
 
     /**
+     * Upload a picture url to AWS S3 and record its information to database
+     */
+    @PostMapping("/upload/batch")
+    @AuthCheck(requiredRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<Integer> uploadPictureByBatch(
+            @RequestBody UploadPictureByBatchRequest uploadPictureByBatchRequest,
+            HttpServletRequest request) {
+        ThrowUtils.throwIf(uploadPictureByBatchRequest == null, ErrorCode.PARAMS_ERROR);
+        User loginUser = userService.getLoginUser(request);
+        int uploadCount = pictureService.uploadPictureByBatch(uploadPictureByBatchRequest, loginUser);
+        return ResultUtils.success(uploadCount);
+    }
+
+    /**
      * Delete a picture according to picture id
      */
     @PostMapping("/delete")

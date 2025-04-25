@@ -79,6 +79,13 @@
 			<groupId>com.baomidou</groupId>
 			<artifactId>mybatis-plus-jsqlparser-4.9</artifactId>
 		</dependency>
+		<!-- HTML Parser：https://jsoup.org/ -->
+		<dependency>
+			<groupId>org.jsoup</groupId>
+			<artifactId>jsoup</artifactId>
+			<version>1.15.3</version>
+		</dependency>
+
 		<!-- https://mvnrepository.com/artifact/software.amazon.awssdk/s3 -->
 		<dependency>
 			<groupId>software.amazon.awssdk</groupId>

@@ -74,14 +74,14 @@ public class UrlPictureUpload extends PictureUploadTemplate{
     }
 
     @Override
-    protected void processFile(Object inputSource, File file) throws Exception {
+    protected void processFile(Object inputSource, File file) {
         String fileUrl = (String)inputSource;
         HttpUtil.downloadFile(fileUrl, file);
     }
 
     @Override
     protected Picture constructPicture(Object inputSource, BufferedImage image, String originalFilename, String uploadPath,
-                                       AwsS3ClientConfig awsS3ClientConfig) throws IOException {
+                                       AwsS3ClientConfig awsS3ClientConfig) {
         Picture picture = new Picture();
 
         String fileUrl = (String)inputSource;

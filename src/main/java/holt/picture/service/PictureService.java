@@ -8,9 +8,9 @@ import holt.picture.model.User;
 import holt.picture.model.dto.file.PictureQueryRequest;
 import holt.picture.model.dto.file.PictureReviewRequest;
 import holt.picture.model.dto.file.PictureUploadRequest;
+import holt.picture.model.dto.file.UploadPictureByBatchRequest;
 import holt.picture.model.vo.PictureVO;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.web.multipart.MultipartFile;
 
 /**
 * @author Weiyang Wu
@@ -25,4 +25,5 @@ public interface PictureService extends IService<Picture> {
     void validPicture(Picture picture);
     void reviewPicture(PictureReviewRequest pictureReviewRequest, User loginUser);
     void fillReviewParams(Picture picture, User loginUser);
+    Integer uploadPictureByBatch(UploadPictureByBatchRequest batchRequest, User loginUser);
 }

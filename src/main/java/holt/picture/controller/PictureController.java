@@ -1,5 +1,6 @@
 package holt.picture.controller;
 
+import cn.hutool.core.util.RandomUtil;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import holt.picture.annotation.AuthCheck;
@@ -20,12 +21,16 @@ import holt.picture.service.UserService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.util.DigestUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Controller layer for picture operations
@@ -42,6 +47,8 @@ public class PictureController {
     @Resource
     private UserService userService;
 
+    @Resource
+    private StringRedisTemplate stringRedisTemplate;
     /**
      * Upload a picture file to AWS S3 and record its information to database
      */
@@ -206,6 +213,40 @@ public class PictureController {
         return ResultUtils.success(pictureService.getPictureVOPage(picturePage, request));
     }
 
+    /**
+     * Get filtered information of a list of picture with cache
+     */
+    @PostMapping("/list/page/vo/cache")
+    public BaseResponse<Page<PictureVO>> listPictureVOByPageWithCache(@RequestBody PictureQueryRequest pictureQueryRequest,
+                                                             HttpServletRequest request) {
+        long current = pictureQueryRequest.getCurrent();
+        long size = pictureQueryRequest.getPageSize();
+        // Limit what the user can query about in terms of size
+        ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
+        pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
+        // Check cache, set key as formatted hashed parameters and value as request object
+        String queryCondition = JSONUtil.toJsonStr(pictureQueryRequest);
+        String hashKey = DigestUtils.md5DigestAsHex(queryCondition.getBytes());
+        String redisKey = String.format("cloudPicture:listPictureVOByPage:%s", hashKey);
+        ValueOperations<String, String> opsForValue = stringRedisTemplate.opsForValue();
+        String cachedValue = opsForValue.get(redisKey);
+        // In case where a cache is available, use cache
+        if (cachedValue != null) {
+            Page<PictureVO> cachedPage = JSONUtil.toBean(cachedValue, Page.class);
+            return ResultUtils.success(cachedPage);
+        }
+
+        // No cache, make a query and save in a cache
+        Page<Picture> picturePage = pictureService.page(new Page<>(current, size),
+                pictureService.getPictureQueryWrapper(pictureQueryRequest));
+        Page<PictureVO> pictureVOPage = pictureService.getPictureVOPage(picturePage, request);
+        String cacheValue = JSONUtil.toJsonStr(pictureVOPage);
+        // Set an expiry time form 5 to 10 minutes to avoid cache
+        int cacheExpire = 300 + RandomUtil.randomInt(0, 300);
+        opsForValue.set(redisKey, cacheValue, cacheExpire, TimeUnit.SECONDS);
+
+        return ResultUtils.success(pictureVOPage);
+    }
     /**
      * Get pre-defined picture tag or category
      */

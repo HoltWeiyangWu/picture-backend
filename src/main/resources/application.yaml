@@ -10,6 +10,12 @@ spring:
     url: jdbc:mysql://localhost:3306/picture
     username: root
     password: wuweiyang
+  data:
+    redis:
+      database: 0
+      host: localhost
+      port: 6379
+      connect-timeout: 5000
 #  profiles:
 #    active: local
 mybatis-plus:

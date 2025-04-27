@@ -3,6 +3,8 @@ package holt.picture.controller;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import holt.picture.annotation.AuthCheck;
 import holt.picture.common.BaseResponse;
 import holt.picture.common.DeleteRequest;
@@ -27,6 +29,7 @@ import org.springframework.util.DigestUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -49,6 +52,17 @@ public class PictureController {
 
     @Resource
     private StringRedisTemplate stringRedisTemplate;
+
+    /**
+     * Local cache
+     */
+    private final Cache<String, String> LOCAL_CACHE = Caffeine.newBuilder()
+            .initialCapacity(1024)
+            .maximumSize(10_000L)
+            // Remove cache after five minutes
+            .expireAfterWrite(Duration.ofMinutes(5))
+            .build();
+
     /**
      * Upload a picture file to AWS S3 and record its information to database
      */
@@ -214,7 +228,7 @@ public class PictureController {
     }
 
     /**
-     * Get filtered information of a list of picture with cache
+     * Get filtered information of a list of picture with cache (a combination of local cache and remote cache)
      */
     @PostMapping("/list/page/vo/cache")
     public BaseResponse<Page<PictureVO>> listPictureVOByPageWithCache(@RequestBody PictureQueryRequest pictureQueryRequest,
@@ -227,23 +241,35 @@ public class PictureController {
         // Check cache, set key as formatted hashed parameters and value as request object
         String queryCondition = JSONUtil.toJsonStr(pictureQueryRequest);
         String hashKey = DigestUtils.md5DigestAsHex(queryCondition.getBytes());
-        String redisKey = String.format("cloudPicture:listPictureVOByPage:%s", hashKey);
-        ValueOperations<String, String> opsForValue = stringRedisTemplate.opsForValue();
-        String cachedValue = opsForValue.get(redisKey);
-        // In case where a cache is available, use cache
+        String cacheKey = String.format("cloudPicture:listPictureVOByPage:%s", hashKey);
+
+        // 1. Get value from Caffeine local cache first
+        String cachedValue = LOCAL_CACHE.getIfPresent(cacheKey);
         if (cachedValue != null) {
             Page<PictureVO> cachedPage = JSONUtil.toBean(cachedValue, Page.class);
             return ResultUtils.success(cachedPage);
         }
+        // 2. In case where a local cache is available, use remote redis cache
+        ValueOperations<String, String> opsForValue = stringRedisTemplate.opsForValue();
+        cachedValue = opsForValue.get(cacheKey);
+        if (cachedValue != null) {
+            Page<PictureVO> cachedPage = JSONUtil.toBean(cachedValue, Page.class);
+            LOCAL_CACHE.put(cacheKey, cachedValue);
+            return ResultUtils.success(cachedPage);
+        }
 
-        // No cache, make a query and save in a cache
+        // 3. No cache found locally or remotely, make a query and save in both caches
+        // Make a query to the database
         Page<Picture> picturePage = pictureService.page(new Page<>(current, size),
                 pictureService.getPictureQueryWrapper(pictureQueryRequest));
         Page<PictureVO> pictureVOPage = pictureService.getPictureVOPage(picturePage, request);
         String cacheValue = JSONUtil.toJsonStr(pictureVOPage);
         // Set an expiry time form 5 to 10 minutes to avoid cache
         int cacheExpire = 300 + RandomUtil.randomInt(0, 300);
-        opsForValue.set(redisKey, cacheValue, cacheExpire, TimeUnit.SECONDS);
+        // Set Redis remote cache
+        opsForValue.set(cacheKey, cacheValue, cacheExpire, TimeUnit.SECONDS);
+        // Set local cache
+        LOCAL_CACHE.put(cacheKey, cacheValue);
 
         return ResultUtils.success(pictureVOPage);
     }

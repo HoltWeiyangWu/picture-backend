@@ -52,3 +52,30 @@ ALTER TABLE picture
 
 -- Create an index on review status
 CREATE INDEX idx_reviewStatus ON picture (reviewStatus);
+
+
+-- Storage space table
+create table if not exists space
+(
+    id         bigint auto_increment comment 'id' primary key,
+    spaceName  varchar(128)                       null comment 'Space name',
+    spaceLevel int      default 0                 null comment 'Space level 0-Personal 1-Professional 2-Flagship',
+    maxSize    bigint   default 0                 null comment 'Maximal storage size',
+    maxCount   bigint   default 0                 null comment 'Maximal picture number',
+    totalSize  bigint   default 0                 null comment 'Total storage used in the current space',
+    totalCount bigint   default 0                 null comment 'Total number of pictures in the current space',
+    creatorId  bigint                             not null comment 'Creator ID',
+    createTime datetime default CURRENT_TIMESTAMP not null comment 'Create time',
+    editTime   datetime default CURRENT_TIMESTAMP not null comment 'Edit time',
+    updateTime datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment 'Update time by Admins',
+    isDeleted   tinyint  default 0                 not null comment 'isDeleted',
+    -- Index design to improve query performance based on different indexes
+    index idx_userId (creatorId),
+    index idx_spaceName (spaceName),
+    index idx_spaceLevel (spaceLevel)
+) comment 'Picture storage space' collate = utf8mb4_unicode_ci;
+
+ALTER TABLE picture
+    ADD COLUMN spaceId bigint null comment 'Space ID (null means that the space is public )';
+
+CREATE INDEX  idx_spaceId ON picture (spaceId);

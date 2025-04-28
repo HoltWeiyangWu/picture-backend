@@ -10,6 +10,7 @@ import holt.picture.exception.ErrorCode;
 import holt.picture.exception.ThrowUtils;
 import holt.picture.model.Space;
 import holt.picture.model.User;
+import holt.picture.model.dto.space.SpaceAddRequest;
 import holt.picture.model.dto.space.SpaceEditRequest;
 import holt.picture.model.dto.space.SpaceQueryRequest;
 import holt.picture.model.dto.space.SpaceUpdateRequest;
@@ -37,6 +38,13 @@ public class SpaceController {
     @Resource
     private UserService userService;
 
+    @PostMapping("/add")
+    public BaseResponse<Long> addSpace(@RequestBody SpaceAddRequest spaceAddRequest, HttpServletRequest request) {
+        ThrowUtils.throwIf(spaceAddRequest == null, ErrorCode.PARAMS_ERROR);
+        User loginUser = userService.getLoginUser(request);
+        long newId = spaceService.addSpace(spaceAddRequest, loginUser);
+        return ResultUtils.success(newId);
+    }
 
     /**
      * Delete a space according to space id

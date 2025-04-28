@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import holt.picture.model.Space;
 import com.baomidou.mybatisplus.extension.service.IService;
+import holt.picture.model.User;
+import holt.picture.model.dto.space.SpaceAddRequest;
 import holt.picture.model.dto.space.SpaceQueryRequest;
 import holt.picture.model.vo.SpaceVO;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,4 +20,5 @@ public interface SpaceService extends IService<Space> {
     Page<SpaceVO> getSpaceVOPage(Page<Space> spacePage, HttpServletRequest request);
     void validSpace(Space space, boolean isAdding);
     void fillSpaceBySpaceLevel(Space space);
+    long addSpace(SpaceAddRequest spaceAddRequest, User loginUser);
 }

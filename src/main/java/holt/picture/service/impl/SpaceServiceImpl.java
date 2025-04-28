@@ -6,10 +6,12 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import holt.picture.exception.BusinessException;
 import holt.picture.exception.ErrorCode;
 import holt.picture.exception.ThrowUtils;
 import holt.picture.model.Space;
 import holt.picture.model.User;
+import holt.picture.model.dto.space.SpaceAddRequest;
 import holt.picture.model.dto.space.SpaceQueryRequest;
 import holt.picture.model.enums.SpaceLevelEnum;
 import holt.picture.model.vo.SpaceVO;
@@ -19,10 +21,13 @@ import holt.picture.mapper.SpaceMapper;
 import holt.picture.service.UserService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -36,6 +41,9 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private TransactionTemplate transactionTemplate;
 
     @Override
     public QueryWrapper<Space> getSpaceQueryWrapper(SpaceQueryRequest spaceQueryRequest) {
@@ -136,6 +144,45 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
             if (space.getMaxCount() == null) {
                 space.setMaxCount(maxCount);
             }
+        }
+    }
+
+    @Override
+    public long addSpace(SpaceAddRequest spaceAddRequest, User loginUser) {
+        // 1. Fill in parameter values
+        Space space = new Space();
+        BeanUtils.copyProperties(spaceAddRequest, space);
+        if (StrUtil.isBlank(space.getSpaceName())) {
+            space.setSpaceName("Default space");
+        }
+        if (space.getSpaceLevel() == null) {
+            space.setSpaceLevel(SpaceLevelEnum.PERSONAL.getValue());
+        }
+        this.fillSpaceBySpaceLevel(space);
+        // 2. Validate parameters
+        this.validSpace(space, true);
+        // 3. Check authorisation, non-admin users can only personal-level space
+        Long userId = loginUser.getId();
+        space.setCreatorId(userId);
+        boolean isCreatingNonPersonalSpace = SpaceLevelEnum.PERSONAL.getValue() != space.getSpaceLevel();
+        if (isCreatingNonPersonalSpace && !userService.isAdmin(loginUser)) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "You are not allowed to create a space of this level");
+        }
+
+        // 4. Ensure that users can only create one space
+        String lock = String.valueOf(userId).intern(); // intern() is to ensure that the lock string is the same object
+        synchronized (lock) {
+            Long newSpaceId = transactionTemplate.execute(status -> {
+                // Check if there exists a space
+                boolean exists = this.lambdaQuery()
+                        .eq(Space::getCreatorId, userId)
+                        .exists();
+                ThrowUtils.throwIf(exists, ErrorCode.OPERATION_ERROR, "Only one space can be created");
+                boolean result = this.save(space);
+                ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "Failed to save space into database");
+                return space.getId();
+            });
+            return Optional.ofNullable(newSpaceId).orElse(-1L);
         }
     }
 }

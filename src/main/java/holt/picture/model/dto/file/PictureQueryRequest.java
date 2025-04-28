@@ -92,6 +92,16 @@ public class PictureQueryRequest extends PageRequest implements Serializable {
      */
     private Long reviewerId;
 
+    /**
+     * Space ID
+     */
+    private Long spaceId;
+
+    /**
+     * Whether to query picture with null space ID
+     */
+    private boolean nullSpaceId;
+
     @Serial
     private static final long serialVersionUID = 1L;
 }

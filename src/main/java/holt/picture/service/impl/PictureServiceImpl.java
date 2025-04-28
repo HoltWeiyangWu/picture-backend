@@ -3,6 +3,7 @@ package holt.picture.service.impl;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -13,16 +14,15 @@ import holt.picture.manager.upload.FilePictureUpload;
 import holt.picture.manager.upload.PictureUploadTemplate;
 import holt.picture.manager.upload.UrlPictureUpload;
 import holt.picture.model.Picture;
-import holt.picture.model.dto.file.UploadPictureByBatchRequest;
+import holt.picture.model.Space;
+import holt.picture.model.dto.file.*;
 import holt.picture.model.enums.PictureReviewStatusEnum;
 import holt.picture.model.User;
-import holt.picture.model.dto.file.PictureQueryRequest;
-import holt.picture.model.dto.file.PictureReviewRequest;
-import holt.picture.model.dto.file.PictureUploadRequest;
 import holt.picture.model.vo.PictureVO;
 import holt.picture.model.vo.UserVO;
 import holt.picture.service.PictureService;
 import holt.picture.mapper.PictureMapper;
+import holt.picture.service.SpaceService;
 import holt.picture.service.UserService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
@@ -58,14 +58,27 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
     @Resource
     private UserService userService;
 
+    @Resource
+    private SpaceService spaceService;
+
     @Override
     public PictureVO uploadPicture(Object inputSource, PictureUploadRequest pictureUploadRequest, User loginUser) {
         ThrowUtils.throwIf(loginUser == null, ErrorCode.NO_AUTH_ERROR);
-        Long pictureId = null;
-        // Check whether the user is adding a picture or updating a picture
-        if (pictureUploadRequest != null) {
-            pictureId = pictureUploadRequest.getId();
+        ThrowUtils.throwIf(pictureUploadRequest == null, ErrorCode.NO_AUTH_ERROR);
+        // Check if space exists
+        Long spaceId = pictureUploadRequest.getSpaceId();
+        if (spaceId != null) {
+            Space space = spaceService.getById(spaceId);
+            ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR, "No storage space found");
+            // Check is user is authorised for this space
+            boolean isCreator = loginUser.getId().equals(space.getCreatorId());
+            ThrowUtils.throwIf(!isCreator, ErrorCode.NO_AUTH_ERROR,
+                    "You are not authorized to upload picture to this storage space");
         }
+
+        // Check whether the user is adding a picture or updating a picture
+        Long pictureId = pictureUploadRequest.getId();
+
         // Validate picture's existence if updating
         if (pictureId != null) {
             Picture existingPicture = this.getById(pictureId);
@@ -75,16 +88,33 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             if (!existingPicture.getCreatorId().equals(loginUser.getId()) && !userService.isAdmin(loginUser)) {
                 throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "You are not authorized to edit this file");
             }
+            // Check if the space remains the same
+            if (spaceId == null) {
+                if (existingPicture.getSpaceId() != null) {
+                    spaceId = existingPicture.getSpaceId();
+                }
+            } else {
+                if (ObjUtil.notEqual(spaceId, existingPicture.getSpaceId())) {
+                    throw new BusinessException(ErrorCode.PARAMS_ERROR, "Space ID does not match");
+                }
+            }
         }
-        String uploadPathPrefix = String.format("public/%s", loginUser.getId());
+        String uploadPathPrefix;
+        if (spaceId == null) {
+            uploadPathPrefix = String.format("public/%s", loginUser.getId());
+        } else {
+            uploadPathPrefix = String.format("space/%s", spaceId);
+        }
+
         PictureUploadTemplate pictureUploadTemplate = filePictureUpload;
         if (inputSource instanceof String) {
             pictureUploadTemplate = urlPictureUpload;
         }
         Picture picture = pictureUploadTemplate.uploadPicture(inputSource, uploadPathPrefix);
         picture.setCreatorId(loginUser.getId());
+        picture.setSpaceId(spaceId);
         // Set a picture name if it is provided through batch uploading
-        if (pictureUploadRequest != null && StrUtil.isNotBlank(pictureUploadRequest.getPicName())) {
+        if (StrUtil.isNotBlank(pictureUploadRequest.getPicName())) {
             picture.setName(pictureUploadRequest.getPicName());
         }
         fillReviewParams(picture, loginUser);
@@ -121,6 +151,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         Integer reviewStatus = pictureQueryRequest.getReviewStatus();
         String reviewMessage = pictureQueryRequest.getReviewMessage();
         Long reviewerId = pictureQueryRequest.getReviewerId();
+        Long spaceId = pictureQueryRequest.getSpaceId();
+        boolean nullSpaceId = pictureQueryRequest.isNullSpaceId();
 
         // Find text from name or introduction
         if (StrUtil.isNotBlank(searchText)) {
@@ -132,6 +164,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         }
         queryWrapper.eq(ObjUtil.isNotEmpty(id), "id", id);
         queryWrapper.eq(ObjUtil.isNotEmpty(creatorId), "creatorId", creatorId);
+        queryWrapper.eq(ObjUtil.isNotEmpty(spaceId), "spaceId", spaceId);
+        queryWrapper.isNull(nullSpaceId, "nullSpaceId");
         queryWrapper.like(StrUtil.isNotBlank(name), "name", name);
         queryWrapper.like(StrUtil.isNotBlank(introduction), "introduction", introduction);
         queryWrapper.like(StrUtil.isNotBlank(picFormat), "picFormat", picFormat);
@@ -333,6 +367,55 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         }
         // 4. Upload pictures
         return uploadCount;
+    }
+
+    /**
+     * Check authorisation of the current picture storage space
+     */
+    @Override
+    public void checkPictureAuth(User loginUser, Picture picture) {
+        Long spaceId = picture.getSpaceId();
+        Long loginUserId = loginUser.getId();
+        boolean isCreator = picture.getCreatorId().equals(loginUserId);
+        if (spaceId == null) {
+            // Public space, only creator or admin can do operations on it
+            ThrowUtils.throwIf(!isCreator&&!userService.isAdmin(loginUser),
+                    ErrorCode.NO_AUTH_ERROR, "You are not authorized to change this picture");
+        } else {
+            // Private space, only creator can operate on it
+            ThrowUtils.throwIf(!isCreator,
+                    ErrorCode.NO_AUTH_ERROR, "You are not authorized to change this picture");
+        }
+    }
+
+    @Override
+    public void deletePicture(long pictureId, User loginUser) {
+
+        // Check if the picture exists
+        Picture picture = this.getById(pictureId);
+        ThrowUtils.throwIf(picture == null, ErrorCode.NOT_FOUND_ERROR);
+        checkPictureAuth(loginUser, picture);
+        boolean result = this.removeById(pictureId);
+        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+    }
+
+    @Override
+    public void editPicture(PictureEditRequest pictureEditRequest, User loginUser) {
+        Picture picture = new Picture();
+        BeanUtils.copyProperties(pictureEditRequest, picture);
+        // Convert Json array to string
+        picture.setTags(JSONUtil.toJsonStr(pictureEditRequest.getTags()));
+        picture.setEditTime(new Date());
+        this.validPicture(picture);
+        long id = pictureEditRequest.getId();
+        // Check if the picture already exists
+        Picture oldPicture = this.getById(id);
+        ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR);
+        this.checkPictureAuth(loginUser, picture);
+        // Add picture review feature
+        this.fillReviewParams(picture, loginUser);
+        boolean result = this.updateById(picture);
+        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
     }
 }
 

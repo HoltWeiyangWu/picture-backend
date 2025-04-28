@@ -17,6 +17,7 @@
             <result property="picScale" column="picScale" />
             <result property="picFormat" column="picFormat" />
             <result property="creatorId" column="creatorId" />
+            <result property="spaceId" column="spaceId" />
             <result property="createTime" column="createTime" />
             <result property="editTime" column="editTime" />
             <result property="updateTime" column="updateTime" />
@@ -25,7 +26,7 @@
 
     <sql id="Base_Column_List">
         id,url,name,introduction,category,tags,
-        picSize,picWidth,picHeight,picScale,picFormat,
+        picSize,picWidth,picHeight,picScale,picFormat, spaceId,
         creatorId,createTime,editTime,updateTime,isDeleted
     </sql>
 </mapper>

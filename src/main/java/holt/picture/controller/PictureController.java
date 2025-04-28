@@ -13,12 +13,14 @@ import holt.picture.constant.UserConstant;
 import holt.picture.exception.ErrorCode;
 import holt.picture.exception.ThrowUtils;
 import holt.picture.model.Picture;
+import holt.picture.model.Space;
 import holt.picture.model.enums.PictureReviewStatusEnum;
 import holt.picture.model.User;
 import holt.picture.model.dto.file.*;
 import holt.picture.model.vo.PictureTagCategory;
 import holt.picture.model.vo.PictureVO;
 import holt.picture.service.PictureService;
+import holt.picture.service.SpaceService;
 import holt.picture.service.UserService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
@@ -52,6 +54,9 @@ public class PictureController {
 
     @Resource
     private StringRedisTemplate stringRedisTemplate;
+
+    @Resource
+    private SpaceService spaceService;
 
     /**
      * Local cache
@@ -111,13 +116,7 @@ public class PictureController {
         ThrowUtils.throwIf(deleteRequest == null || deleteRequest.getId() <= 0, ErrorCode.PARAMS_ERROR);
         User loginUser = userService.getLoginUser(request);
         long id = deleteRequest.getId();
-
-        // Check if the picture exists
-        Picture picture = pictureService.getById(id);
-        ThrowUtils.throwIf(picture == null, ErrorCode.NOT_FOUND_ERROR);
-        checkIfOwnerOrAdmin(picture, loginUser);
-        boolean result = pictureService.removeById(id);
-        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        pictureService.deletePicture(id, loginUser);
         return ResultUtils.success(true);
     }
 
@@ -155,22 +154,8 @@ public class PictureController {
     public BaseResponse<Boolean> editPicture(@RequestBody PictureEditRequest pictureEditRequest, HttpServletRequest request) {
         ThrowUtils.throwIf(pictureEditRequest == null || pictureEditRequest.getId() <= 0,
                 ErrorCode.PARAMS_ERROR);
-        Picture picture = new Picture();
-        BeanUtils.copyProperties(pictureEditRequest, picture);
-        // Convert Json array to string
-        picture.setTags(JSONUtil.toJsonStr(pictureEditRequest.getTags()));
-        picture.setEditTime(new Date());
-        pictureService.validPicture(picture);
-        long id = pictureEditRequest.getId();
-        // Check if the picture already exists
-        Picture oldPicture = pictureService.getById(id);
-        ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR);
         User loginUser = userService.getLoginUser(request);
-        checkIfOwnerOrAdmin(oldPicture, loginUser);
-        // Add picture review feature
-        pictureService.fillReviewParams(picture, loginUser);
-        boolean result = pictureService.updateById(picture);
-        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        pictureService.editPicture(pictureEditRequest, loginUser);
         return ResultUtils.success(true);
     }
 
@@ -194,6 +179,11 @@ public class PictureController {
         ThrowUtils.throwIf(id <= 0, ErrorCode.PARAMS_ERROR);
         Picture picture = pictureService.getById(id);
         ThrowUtils.throwIf(picture == null, ErrorCode.NOT_FOUND_ERROR);
+        Long spaceId = picture.getSpaceId();
+        if (spaceId != null) {
+            User loginUser = userService.getLoginUser(request);
+            pictureService.checkPictureAuth(loginUser, picture);
+        }
         return ResultUtils.success(pictureService.getPictureVO(picture, request));
     }
 
@@ -222,6 +212,20 @@ public class PictureController {
         // Limit what the user can query about in terms of size
         ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
         pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
+        // Space authorisation check
+        Long spaceId = pictureQueryRequest.getSpaceId();
+        if (spaceId == null) {
+            // Public space: users can see reviewed pictures
+            pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
+            pictureQueryRequest.setNullSpaceId(true);
+        } else {
+            // Private space
+            User loginUser = userService.getLoginUser(request);
+            Space space = spaceService.getById(spaceId);
+            ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR, "Storage space not found");
+            boolean isCreator = loginUser.getId().equals(space.getCreatorId());
+            ThrowUtils.throwIf(!isCreator, ErrorCode.NO_AUTH_ERROR, "No auth permission");
+        }
         Page<Picture> picturePage = pictureService.page(new Page<>(current, size),
                 pictureService.getPictureQueryWrapper(pictureQueryRequest));
         return ResultUtils.success(pictureService.getPictureVOPage(picturePage, request));
@@ -230,6 +234,7 @@ public class PictureController {
     /**
      * Get filtered information of a list of picture with cache (a combination of local cache and remote cache)
      */
+    @Deprecated
     @PostMapping("/list/page/vo/cache")
     public BaseResponse<Page<PictureVO>> listPictureVOByPageWithCache(@RequestBody PictureQueryRequest pictureQueryRequest,
                                                              HttpServletRequest request) {
@@ -302,6 +307,7 @@ public class PictureController {
     /**
      * Helper function to check if the user is authorised to access the current picture object
      */
+    @Deprecated
     private void checkIfOwnerOrAdmin(Picture picture, User loginUser) {
         boolean isCreator = picture.getCreatorId().equals(loginUser.getId());
         boolean isAdmin = userService.isAdmin(loginUser);

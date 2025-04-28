@@ -77,6 +77,10 @@ public class PictureVO implements Serializable {
     private Long creatorId;
 
     /**
+     * Space id
+     */
+    private Long spaceId;
+    /**
      * create time
      */
     private Date createTime;

@@ -10,10 +10,8 @@ import holt.picture.exception.ErrorCode;
 import holt.picture.exception.ThrowUtils;
 import holt.picture.model.Space;
 import holt.picture.model.User;
-import holt.picture.model.dto.space.SpaceAddRequest;
-import holt.picture.model.dto.space.SpaceEditRequest;
-import holt.picture.model.dto.space.SpaceQueryRequest;
-import holt.picture.model.dto.space.SpaceUpdateRequest;
+import holt.picture.model.dto.space.*;
+import holt.picture.model.enums.SpaceLevelEnum;
 import holt.picture.model.vo.SpaceVO;
 import holt.picture.service.SpaceService;
 import holt.picture.service.UserService;
@@ -22,7 +20,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @author Weiyang Wu
@@ -69,8 +70,7 @@ public class SpaceController {
      */
     @PostMapping("/update")
     @AuthCheck(requiredRole = UserConstant.ADMIN_ROLE)
-    public BaseResponse<Boolean> updateSpace(@RequestBody SpaceUpdateRequest spaceUpdateRequest,
-                                               HttpServletRequest request) {
+    public BaseResponse<Boolean> updateSpace(@RequestBody SpaceUpdateRequest spaceUpdateRequest) {
         ThrowUtils.throwIf(spaceUpdateRequest == null || spaceUpdateRequest.getId() <= 0,
                 ErrorCode.PARAMS_ERROR);
         Space space = new Space();
@@ -172,4 +172,16 @@ public class SpaceController {
         ThrowUtils.throwIf(!isCreator || !isAdmin, ErrorCode.NO_AUTH_ERROR);
     }
 
+    @GetMapping("/list/level")
+    public BaseResponse<List<SpaceLevel>> listSpaceLevels() {
+        List<SpaceLevel> spaceLevelList = Arrays.stream(SpaceLevelEnum.values())
+                .map(spaceLevelEnum -> new SpaceLevel(
+                        spaceLevelEnum.getValue(),
+                        spaceLevelEnum.getText(),
+                        spaceLevelEnum.getMaxSize(),
+                        spaceLevelEnum.getMaxCount()
+                ))
+                .collect(Collectors.toList());
+        return ResultUtils.success(spaceLevelList);
+    }
 }

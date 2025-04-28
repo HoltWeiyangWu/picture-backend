@@ -32,6 +32,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.io.IOException;
 import java.util.Date;
@@ -61,6 +62,10 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
     @Resource
     private SpaceService spaceService;
 
+    @Resource
+    private TransactionTemplate transactionTemplate;
+
+
     @Override
     public PictureVO uploadPicture(Object inputSource, PictureUploadRequest pictureUploadRequest, User loginUser) {
         ThrowUtils.throwIf(loginUser == null, ErrorCode.NO_AUTH_ERROR);
@@ -74,6 +79,13 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             boolean isCreator = loginUser.getId().equals(space.getCreatorId());
             ThrowUtils.throwIf(!isCreator, ErrorCode.NO_AUTH_ERROR,
                     "You are not authorized to upload picture to this storage space");
+            // Check if there remains any space left
+            if (space.getTotalCount() >= space.getMaxCount()) {
+                throw new BusinessException(ErrorCode.OPERATION_ERROR, "Too many pictures in the storage space");
+            }
+            if (space.getTotalSize() >= space.getMaxSize()) {
+                throw new BusinessException(ErrorCode.OPERATION_ERROR, "Storage space is not enough");
+            }
         }
 
         // Check whether the user is adding a picture or updating a picture
@@ -123,8 +135,22 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             picture.setId(pictureId);
             picture.setEditTime(new Date());
         }
-        boolean result = this.saveOrUpdate(picture);
-        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "Failed to save it to database");
+        Long finalSpaceId = spaceId;
+        transactionTemplate.execute(status -> {
+
+            boolean result = this.saveOrUpdate(picture);
+            ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "Failed to save it to database");
+            if (finalSpaceId != null) {
+                boolean update = spaceService.lambdaUpdate()
+                        .eq(Space::getId, finalSpaceId)
+                        .setSql("totalSize = totalSize + " + picture.getPicSize())
+                        .setSql("totalCount = totalCount + 1")
+                        .update();
+                ThrowUtils.throwIf(!update, ErrorCode.OPERATION_ERROR, "Failed to update space status information");
+            }
+            return PictureVO.objectToVo(picture);
+        });
+
         return PictureVO.objectToVo(picture);
     }
 
@@ -395,8 +421,21 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         Picture picture = this.getById(pictureId);
         ThrowUtils.throwIf(picture == null, ErrorCode.NOT_FOUND_ERROR);
         checkPictureAuth(loginUser, picture);
-        boolean result = this.removeById(pictureId);
-        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+
+        transactionTemplate.execute(status -> {
+            boolean result = this.removeById(pictureId);
+            ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+            Long spaceId = picture.getSpaceId();
+            if (spaceId != null) {
+                boolean update = spaceService.lambdaUpdate()
+                        .eq(Space::getId, spaceId)
+                        .setSql("totalSize = totalSize - " + picture.getPicSize())
+                        .setSql("totalCount = totalCount - 1")
+                        .update();
+                ThrowUtils.throwIf(!update, ErrorCode.OPERATION_ERROR, "Failed to update space status information");
+            }
+            return PictureVO.objectToVo(picture);
+        });
     }
 
     @Override

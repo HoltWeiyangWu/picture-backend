@@ -10,6 +10,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import holt.picture.exception.BusinessException;
 import holt.picture.exception.ErrorCode;
 import holt.picture.exception.ThrowUtils;
+import holt.picture.manager.AwsS3Manager;
 import holt.picture.manager.upload.FilePictureUpload;
 import holt.picture.manager.upload.PictureUploadTemplate;
 import holt.picture.manager.upload.UrlPictureUpload;
@@ -35,6 +36,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -65,6 +69,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
     @Resource
     private TransactionTemplate transactionTemplate;
 
+    @Resource
+    private AwsS3Manager awsS3Manager;
 
     @Override
     public PictureVO uploadPicture(Object inputSource, PictureUploadRequest pictureUploadRequest, User loginUser) {
@@ -436,6 +442,14 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             }
             return PictureVO.objectToVo(picture);
         });
+        try {
+            URI uri = new URI(picture.getUrl());
+            String key = uri.getPath().substring(1);
+            awsS3Manager.deleteObject(key);
+        } catch (URISyntaxException e) {
+            log.error("Failed to find object key" + e.getMessage());
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "Failed to delete picture on AWS S3");
+        }
     }
 
     @Override

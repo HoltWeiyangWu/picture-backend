@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.services.s3.model.DeleteObjectResponse;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.utils.IoUtils;
@@ -83,6 +84,17 @@ public class FileController {
             if (responseInputStream != null) {
                 responseInputStream.close();
             }
+        }
+    }
+
+    @AuthCheck(requiredRole = UserConstant.ADMIN_ROLE)
+    @GetMapping("/test/delete")
+    public BaseResponse<String> testDelete(String filePath) {
+        try {
+            DeleteObjectResponse response = awsS3Manager.deleteObject(filePath);
+            return ResultUtils.success(response.toString());
+        } catch (Exception e) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, e.getMessage());
         }
     }
 }

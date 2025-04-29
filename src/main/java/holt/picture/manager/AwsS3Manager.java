@@ -11,10 +11,7 @@ import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectResponse;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.s3.model.*;
 
 import java.io.File;
 
@@ -67,5 +64,18 @@ public class AwsS3Manager {
             log.error(e.getMessage());
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "Failed to put file to AWS S3");
         }
+    }
+
+    public DeleteObjectResponse deleteObject(String key){
+        try {
+            DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
+                    .bucket(awsS3ClientConfig.getBucket())
+                    .key(key)
+                    .build();
+            return s3Client.deleteObject(deleteObjectRequest);
+        } catch (S3Exception e) {
+            System.out.println("Failed to delete file from AWS S3 " + e.getMessage());
+        }
+        return null;
     }
 }

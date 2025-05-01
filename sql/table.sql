@@ -68,7 +68,7 @@ create table if not exists space
     createTime datetime default CURRENT_TIMESTAMP not null comment 'Create time',
     editTime   datetime default CURRENT_TIMESTAMP not null comment 'Edit time',
     updateTime datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment 'Update time by Admins',
-    isDeleted   tinyint  default 0                 not null comment 'isDeleted',
+    isDeleted  tinyint  default 0                 not null comment 'isDeleted',
     -- Index design to improve query performance based on different indexes
     index idx_userId (creatorId),
     index idx_spaceName (spaceName),

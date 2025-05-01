@@ -197,7 +197,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         queryWrapper.eq(ObjUtil.isNotEmpty(id), "id", id);
         queryWrapper.eq(ObjUtil.isNotEmpty(creatorId), "creatorId", creatorId);
         queryWrapper.eq(ObjUtil.isNotEmpty(spaceId), "spaceId", spaceId);
-        queryWrapper.isNull(nullSpaceId, "nullSpaceId");
+        queryWrapper.isNull(nullSpaceId, "spaceId");
         queryWrapper.like(StrUtil.isNotBlank(name), "name", name);
         queryWrapper.like(StrUtil.isNotBlank(introduction), "introduction", introduction);
         queryWrapper.like(StrUtil.isNotBlank(picFormat), "picFormat", picFormat);
@@ -464,7 +464,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         // Check if the picture already exists
         Picture oldPicture = this.getById(id);
         ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR);
-        this.checkPictureAuth(loginUser, picture);
+        this.checkPictureAuth(loginUser, oldPicture);
         // Add picture review feature
         this.fillReviewParams(picture, loginUser);
         boolean result = this.updateById(picture);

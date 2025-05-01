@@ -70,7 +70,7 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
 
     @Override
     public SpaceVO getSpaceVO(Space space, HttpServletRequest request) {
-        SpaceVO spaceVO = new SpaceVO();
+        SpaceVO spaceVO = SpaceVO.objToVo(space);
         Long creatorId = space.getCreatorId();
         if (creatorId != null && creatorId > 0) {
             User creator = userService.getById(creatorId);

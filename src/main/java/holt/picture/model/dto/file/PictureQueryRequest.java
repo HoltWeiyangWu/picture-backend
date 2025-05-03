@@ -6,6 +6,7 @@ import lombok.EqualsAndHashCode;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -101,6 +102,17 @@ public class PictureQueryRequest extends PageRequest implements Serializable {
      * Whether to query picture with null space ID
      */
     private boolean nullSpaceId;
+
+    /**
+     * Starting point of the edit time
+     */
+    private Date startEditTime;
+
+    /**
+     * Ending3
+     * point of the edit time
+     */
+    private Date endEditTime;
 
     @Serial
     private static final long serialVersionUID = 1L;

@@ -33,6 +33,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.io.IOException;
@@ -472,6 +473,69 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         this.fillReviewParams(picture, loginUser);
         boolean result = this.updateById(picture);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+    }
+
+    /**
+     * Edit a group of pictures' category and tags
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void editPictureByBatch(PictureEditByBatchRequest pictureEditByBatchRequest, User loginUser) {
+        // Obtain parameters
+        List<Long> pictureIdList = pictureEditByBatchRequest.getPictureIdList();
+        Long spaceId = pictureEditByBatchRequest.getSpaceId();
+        String category = pictureEditByBatchRequest.getCategory();
+        List<String> tags = pictureEditByBatchRequest.getTags();
+        String namingRule = pictureEditByBatchRequest.getNamingRule();
+
+        // 1. Validate parameters
+        ThrowUtils.throwIf(spaceId == null || pictureIdList.isEmpty(), ErrorCode.PARAMS_ERROR);
+        ThrowUtils.throwIf(loginUser == null, ErrorCode.NO_AUTH_ERROR);
+        // 2. Check authorisation
+        Space space = spaceService.getById(spaceId);
+        ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR, "Space not found");
+        boolean isCreator = loginUser.getId().equals(space.getCreatorId());
+        ThrowUtils.throwIf(!isCreator, ErrorCode.NO_AUTH_ERROR, "Not authorised to access this space");
+
+        // 3. Query pictures through IDs
+        List<Picture> pictureList = this.lambdaQuery()
+                .select(Picture::getId, Picture::getSpaceId)
+                .eq(Picture::getSpaceId, spaceId)
+                .in(Picture::getId, pictureIdList)
+                .list();
+        if (pictureList.isEmpty()) {
+            return;
+        }
+        // 4. Update name
+        fillPictureWithNamingRule(pictureList, namingRule);
+        // 5. Update category and tags
+        pictureList.forEach(picture -> {
+            if (StrUtil.isNotBlank(category)) {
+                picture.setCategory(category);
+            }
+            if (CollUtil.isNotEmpty(tags)) {
+                picture.setTags(JSONUtil.toJsonStr(tags));
+            }
+        });
+        // 6. Edit pictures by batch
+        boolean result = this.updateBatchById(pictureList);
+        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+    }
+
+    private void fillPictureWithNamingRule(List<Picture> pictureList, String namingRule) {
+        if (CollUtil.isEmpty(pictureList) || StrUtil.isBlank(namingRule)) {
+            return;
+        }
+        long count = 1;
+        try {
+            for (Picture picture : pictureList) {
+                String pictureName = namingRule.replaceAll("\\{order}", String.valueOf(count++));
+                picture.setName(pictureName);
+            }
+        } catch (Exception e) {
+            log.error("Failed to parse naming rule", e);
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "Failed to parse naming rule");
+        }
     }
 }
 

@@ -21,4 +21,5 @@ public interface SpaceService extends IService<Space> {
     void validSpace(Space space, boolean isAdding);
     void fillSpaceBySpaceLevel(Space space);
     long addSpace(SpaceAddRequest spaceAddRequest, User loginUser);
+    void checkIfOwnerOrAdmin(User loginUser, Space space);
 }

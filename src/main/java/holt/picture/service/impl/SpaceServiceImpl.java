@@ -185,6 +185,17 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
             return Optional.ofNullable(newSpaceId).orElse(-1L);
         }
     }
+
+
+    /**
+     * Helper function to check if the user is authorised to access the current space object
+     */
+    @Override
+    public void checkIfOwnerOrAdmin(User loginUser, Space space) {
+        boolean isCreator = space.getCreatorId().equals(loginUser.getId());
+        boolean isAdmin = userService.isAdmin(loginUser);
+        ThrowUtils.throwIf(!isCreator || !isAdmin, ErrorCode.NO_AUTH_ERROR);
+    }
 }
 
 

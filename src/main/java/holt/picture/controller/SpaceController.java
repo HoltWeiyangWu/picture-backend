@@ -59,7 +59,7 @@ public class SpaceController {
         // Check if the space exists
         Space space = spaceService.getById(id);
         ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR);
-        checkIfOwnerOrAdmin(space, loginUser);
+        spaceService.checkIfOwnerOrAdmin(loginUser, space);
         boolean result = spaceService.removeById(id);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
         return ResultUtils.success(true);
@@ -105,7 +105,7 @@ public class SpaceController {
         Space oldSpace = spaceService.getById(id);
         ThrowUtils.throwIf(oldSpace == null, ErrorCode.NOT_FOUND_ERROR);
         User loginUser = userService.getLoginUser(request);
-        checkIfOwnerOrAdmin(oldSpace, loginUser);
+        spaceService.checkIfOwnerOrAdmin(loginUser, oldSpace);
         boolean result = spaceService.updateById(space);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
         return ResultUtils.success(true);
@@ -161,15 +161,6 @@ public class SpaceController {
         Page<Space> spacePage = spaceService.page(new Page<>(current, size),
                 spaceService.getSpaceQueryWrapper(spaceQueryRequest));
         return ResultUtils.success(spaceService.getSpaceVOPage(spacePage, request));
-    }
-
-    /**
-     * Helper function to check if the user is authorised to access the current space object
-     */
-    private void checkIfOwnerOrAdmin(Space space, User loginUser) {
-        boolean isCreator = space.getCreatorId().equals(loginUser.getId());
-        boolean isAdmin = userService.isAdmin(loginUser);
-        ThrowUtils.throwIf(!isCreator || !isAdmin, ErrorCode.NO_AUTH_ERROR);
     }
 
     @GetMapping("/list/level")

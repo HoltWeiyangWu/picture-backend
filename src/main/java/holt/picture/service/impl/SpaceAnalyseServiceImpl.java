@@ -1,6 +1,8 @@
 package holt.picture.service.impl;
 
 import cn.hutool.core.util.NumberUtil;
+import cn.hutool.core.util.ObjUtil;
+import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import holt.picture.exception.BusinessException;
@@ -10,9 +12,8 @@ import holt.picture.mapper.SpaceMapper;
 import holt.picture.model.Picture;
 import holt.picture.model.Space;
 import holt.picture.model.User;
-import holt.picture.model.dto.space.analyse.SpaceAnalyseRequest;
-import holt.picture.model.dto.space.analyse.SpaceUsageAnalyseRequest;
-import holt.picture.model.vo.space.analyse.SpaceUsageAnalyseResponse;
+import holt.picture.model.dto.space.analyse.*;
+import holt.picture.model.vo.space.analyse.*;
 import holt.picture.service.PictureService;
 import holt.picture.service.SpaceAnalyseService;
 import holt.picture.service.SpaceService;
@@ -20,7 +21,10 @@ import holt.picture.service.UserService;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * @author Weiyang Wu
@@ -81,6 +85,130 @@ public class SpaceAnalyseServiceImpl extends ServiceImpl<SpaceMapper, Space> imp
             spaceUsageAnalyseResponse.setCountUsageRatio(countUsageRatio);
             return spaceUsageAnalyseResponse;
         }
+    }
+
+    @Override
+    public List<SpaceCategoryAnalyseResponse> getSpaceCategoryAnalyse(SpaceCategoryAnalyseRequest request, User loginUser) {
+        ThrowUtils.throwIf(request == null, ErrorCode.PARAMS_ERROR);
+        checkSpaceAnalyseAuth(request, loginUser);
+
+        QueryWrapper<Picture> queryWrapper = new QueryWrapper<>();
+        fillAnalyseQueryWrapper(request, queryWrapper);
+
+        queryWrapper.select("category AS category",
+                        "COUNT(*) AS count",
+                        "SUM(*) AS totalSize")
+                .groupBy("category");
+        // Query and convert result
+        return pictureService.getBaseMapper().selectMaps(queryWrapper)
+                .stream()
+                .map(result -> {
+                    String category = result.get("category") != null ? (String) result.get("category") : "Default";
+                    Long count = ((Number) result.get("count")).longValue();
+                    Long totalSize = ((Number) result.get("totalSize")).longValue();
+                    return new SpaceCategoryAnalyseResponse(category, count, totalSize);
+                })
+                .toList();
+    }
+
+    @Override
+    public List<SpaceTagAnalyseResponse> getSpaceTagAnalyse(SpaceTagAnalyseRequest request, User loginUser) {
+        ThrowUtils.throwIf(request == null, ErrorCode.PARAMS_ERROR);
+        checkSpaceAnalyseAuth(request, loginUser);
+
+        QueryWrapper<Picture> queryWrapper = new QueryWrapper<>();
+        fillAnalyseQueryWrapper(request, queryWrapper);
+
+        // Query and convert result
+        queryWrapper.select("tags");
+        List<String> tagsJsonList = pictureService.getBaseMapper().selectObjs(queryWrapper)
+                .stream()
+                .filter(ObjUtil::isNotNull)
+                .map(Object::toString)
+                .toList();
+        Map<String, Long> tagCountMap = tagsJsonList.stream()
+                .flatMap(tagsJson-> JSONUtil.toList(tagsJson, String.class).stream())
+                .collect(Collectors.groupingBy(tag->tag, Collectors.counting()));
+        return tagCountMap.entrySet().stream()
+                .sorted((e1, e2)-> Long.compare(e2.getValue(), e1.getValue())) // Descending order
+                .map(entry-> new SpaceTagAnalyseResponse(entry.getKey(), entry.getValue()))
+                .toList();
+    }
+
+    @Override
+    public List<SpaceSizeAnalyseResponse> getSpaceSizeAnalyse(SpaceSizeAnalyseRequest request, User loginUser) {
+        ThrowUtils.throwIf(request== null, ErrorCode.PARAMS_ERROR);
+        checkSpaceAnalyseAuth(request, loginUser);
+
+        QueryWrapper<Picture> queryWrapper = new QueryWrapper<>();
+        fillAnalyseQueryWrapper(request, queryWrapper);
+
+        queryWrapper.select("size");
+        List<Long> picSizes = pictureService.getBaseMapper().selectObjs(queryWrapper)
+                .stream()
+                .map(size -> ((Number) size).longValue())
+                .toList();
+
+        Map<String, Long> sizeRanges = new LinkedHashMap<>();
+        sizeRanges.put("<100KB", picSizes.stream().filter(size->size < 100 * 1024).count());
+        sizeRanges.put("100KB-500KB", picSizes.stream().filter(size->size >= 100 * 1024 && size < 500 * 1024).count());
+        sizeRanges.put("500KB-1MB", picSizes.stream().filter(size->size >= 500 * 1024 && size < 1024 * 1024).count());
+        sizeRanges.put(">1MB", picSizes.stream().filter(size->size >= 1024 * 1024).count());
+
+        return sizeRanges.entrySet().stream()
+                .map(entry-> new SpaceSizeAnalyseResponse(entry.getKey(), entry.getValue()))
+                .toList();
+    }
+
+    @Override
+    public List<SpaceUserAnalyseResponse> getSpaceUserAnalyse(SpaceUserAnalyseRequest request, User loginUser) {
+        ThrowUtils.throwIf(request==null, ErrorCode.PARAMS_ERROR);
+        checkSpaceAnalyseAuth(request, loginUser);
+
+        QueryWrapper<Picture> queryWrapper = new QueryWrapper<>();
+        Long userId = request.getUserId();
+        queryWrapper.eq(ObjUtil.isNotNull(userId),"userId", userId);
+        fillAnalyseQueryWrapper(request, queryWrapper);
+
+        String timeDimension = request.getTimeDimension();
+        switch (timeDimension) {
+            case "day":
+                queryWrapper.select("DATE_FORMAT(createTime, '%Y-%m-%d') AS period", "COUNT(*) AS count");
+                break;
+            case "week":
+                queryWrapper.select("YEARWEEK(createTime) AS period", "COUNT(*) AS count");
+                break;
+            case "month":
+                queryWrapper.select("DATE_FORMAT(createTime, '%Y-%m') AS period", "COUNT(*) AS count");
+                break;
+            default:
+                throw new BusinessException(ErrorCode.PARAMS_ERROR, "Invalid time dimension");
+        }
+
+        // Group and order
+        queryWrapper.groupBy("period").orderByAsc("period");
+
+        // Query result and convert types
+        List<Map<String, Object>> queryResult = pictureService.getBaseMapper().selectMaps(queryWrapper);
+        return queryResult.stream()
+                .map(result-> {
+                    String period = result.get("period").toString();
+                    Long count = ((Number) result.get("count")).longValue();
+                    return new SpaceUserAnalyseResponse(period, count);
+                })
+                .toList();
+    }
+
+    @Override
+    public List<Space> getSpaceRankAnalyse(SpaceRankAnalyseRequest request, User loginUser) {
+        ThrowUtils.throwIf(request==null, ErrorCode.PARAMS_ERROR);
+        ThrowUtils.throwIf(!userService.isAdmin(loginUser), ErrorCode.NO_AUTH_ERROR);
+
+        QueryWrapper<Space> queryWrapper = new QueryWrapper<>();
+        queryWrapper.select("id", "spaceName", "userId", "totalSize")
+                .orderByDesc("totalSize")
+                .last("LIMIT " + request.getTopN());
+        return spaceService.list(queryWrapper);
     }
 
     private void checkSpaceAnalyseAuth(SpaceAnalyseRequest spaceAnalyseRequest, User loginUser) {

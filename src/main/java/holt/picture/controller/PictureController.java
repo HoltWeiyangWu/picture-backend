@@ -2,6 +2,7 @@ package holt.picture.controller;
 
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.json.JSONUtil;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -211,7 +212,6 @@ public class PictureController {
         long size = pictureQueryRequest.getPageSize();
         // Limit what the user can query about in terms of size
         ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
-        pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
         // Space authorisation check
         Long spaceId = pictureQueryRequest.getSpaceId();
         if (spaceId == null) {
@@ -226,8 +226,9 @@ public class PictureController {
             boolean isCreator = loginUser.getId().equals(space.getCreatorId());
             ThrowUtils.throwIf(!isCreator, ErrorCode.NO_AUTH_ERROR, "No auth permission");
         }
-        Page<Picture> picturePage = pictureService.page(new Page<>(current, size),
-                pictureService.getPictureQueryWrapper(pictureQueryRequest));
+        QueryWrapper<Picture> pictureQueryWrapper = pictureService.getPictureQueryWrapper(pictureQueryRequest);
+        Page<Picture> picturePage = pictureService.page(new Page<>(current, size),pictureQueryWrapper
+                );
         return ResultUtils.success(pictureService.getPictureVOPage(picturePage, request));
     }
 

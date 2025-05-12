@@ -97,7 +97,7 @@ public class SpaceAnalyseServiceImpl extends ServiceImpl<SpaceMapper, Space> imp
 
         queryWrapper.select("category AS category",
                         "COUNT(*) AS count",
-                        "SUM(*) AS totalSize")
+                        "SUM(picSize) AS totalSize")
                 .groupBy("category");
         // Query and convert result
         return pictureService.getBaseMapper().selectMaps(queryWrapper)
@@ -143,7 +143,7 @@ public class SpaceAnalyseServiceImpl extends ServiceImpl<SpaceMapper, Space> imp
         QueryWrapper<Picture> queryWrapper = new QueryWrapper<>();
         fillAnalyseQueryWrapper(request, queryWrapper);
 
-        queryWrapper.select("size");
+        queryWrapper.select("picSize");
         List<Long> picSizes = pictureService.getBaseMapper().selectObjs(queryWrapper)
                 .stream()
                 .map(size -> ((Number) size).longValue())
@@ -167,7 +167,7 @@ public class SpaceAnalyseServiceImpl extends ServiceImpl<SpaceMapper, Space> imp
 
         QueryWrapper<Picture> queryWrapper = new QueryWrapper<>();
         Long userId = request.getUserId();
-        queryWrapper.eq(ObjUtil.isNotNull(userId),"userId", userId);
+        queryWrapper.eq(ObjUtil.isNotNull(userId),"creatorId", userId);
         fillAnalyseQueryWrapper(request, queryWrapper);
 
         String timeDimension = request.getTimeDimension();
@@ -205,7 +205,7 @@ public class SpaceAnalyseServiceImpl extends ServiceImpl<SpaceMapper, Space> imp
         ThrowUtils.throwIf(!userService.isAdmin(loginUser), ErrorCode.NO_AUTH_ERROR);
 
         QueryWrapper<Space> queryWrapper = new QueryWrapper<>();
-        queryWrapper.select("id", "spaceName", "userId", "totalSize")
+        queryWrapper.select("id", "spaceName", "creatorId", "totalSize")
                 .orderByDesc("totalSize")
                 .last("LIMIT " + request.getTopN());
         return spaceService.list(queryWrapper);

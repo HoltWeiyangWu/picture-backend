@@ -194,7 +194,7 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
     public void checkIfOwnerOrAdmin(User loginUser, Space space) {
         boolean isCreator = space.getCreatorId().equals(loginUser.getId());
         boolean isAdmin = userService.isAdmin(loginUser);
-        ThrowUtils.throwIf(!isCreator || !isAdmin, ErrorCode.NO_AUTH_ERROR);
+        ThrowUtils.throwIf(!isCreator && !isAdmin, ErrorCode.NO_AUTH_ERROR);
     }
 }
 

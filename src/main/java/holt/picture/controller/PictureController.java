@@ -312,15 +312,4 @@ public class PictureController {
         pictureService.editPictureByBatch(pictureEditByBatchRequest, loginUser);
         return ResultUtils.success(true);
     }
-
-    /**
-     * Helper function to check if the user is authorised to access the current picture object
-     */
-    @Deprecated
-    private void checkIfOwnerOrAdmin(Picture picture, User loginUser) {
-        boolean isCreator = picture.getCreatorId().equals(loginUser.getId());
-        boolean isAdmin = userService.isAdmin(loginUser);
-        ThrowUtils.throwIf(!isCreator || !isAdmin, ErrorCode.NO_AUTH_ERROR);
-    }
-
 }

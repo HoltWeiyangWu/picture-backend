@@ -14,6 +14,7 @@ import holt.picture.model.User;
 import holt.picture.model.dto.space.SpaceAddRequest;
 import holt.picture.model.dto.space.SpaceQueryRequest;
 import holt.picture.model.enums.SpaceLevelEnum;
+import holt.picture.model.enums.SpaceTypeEnum;
 import holt.picture.model.vo.SpaceVO;
 import holt.picture.model.vo.UserVO;
 import holt.picture.service.SpaceService;
@@ -57,10 +58,11 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
         Integer spaceLevel = spaceQueryRequest.getSpaceLevel();
         String sortField = spaceQueryRequest.getSortField();
         String sortOrder = spaceQueryRequest.getSortOrder();
-
+        Integer spaceType = spaceQueryRequest.getSpaceType();
 
         queryWrapper.eq(ObjUtil.isNotEmpty(id), "id", id);
         queryWrapper.eq(ObjUtil.isNotEmpty(creatorId), "creatorId", creatorId);
+        queryWrapper.eq(ObjUtil.isNotEmpty(spaceType), "spaceType", spaceType);
         queryWrapper.like(StrUtil.isNotBlank(spaceName), "spaceName", spaceName);
         queryWrapper.like(ObjUtil.isNotEmpty(spaceLevel), "spaceLevel", spaceLevel);
 
@@ -121,15 +123,20 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
         String spaceName = space.getSpaceName();
         Integer spaceLevel = space.getSpaceLevel();
         SpaceLevelEnum spaceLevelEnum = SpaceLevelEnum.getSpaceLevelEnum(spaceLevel);
+        Integer spaceType = space.getSpaceType();
+        SpaceTypeEnum spaceTypeEnum = SpaceTypeEnum.getEnumByValue(space.getSpaceType());
         // Validate when creation
         if (isAdding) {
             ThrowUtils.throwIf(StrUtil.isBlank(spaceName), ErrorCode.PARAMS_ERROR, "Space name cannot be empty");
             ThrowUtils.throwIf(spaceLevel == null, ErrorCode.PARAMS_ERROR, "Space level cannot be empty");
+            ThrowUtils.throwIf(spaceType==null, ErrorCode.PARAMS_ERROR, "Space type cannot be empty");
         }
         ThrowUtils.throwIf(StrUtil.isNotBlank(spaceName) && spaceName.length() > 30,
                 ErrorCode.PARAMS_ERROR, "Space name is too long");
         ThrowUtils.throwIf(spaceLevel != null && spaceLevelEnum == null,
                 ErrorCode.PARAMS_ERROR, "Space level does not exist");
+        ThrowUtils.throwIf(spaceType!=null && spaceTypeEnum==null,
+                ErrorCode.PARAMS_ERROR, "Space type does not exist");
     }
 
     @Override
@@ -150,14 +157,18 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
     @Override
     public long addSpace(SpaceAddRequest spaceAddRequest, User loginUser) {
         // 1. Fill in parameter values
+        if (StrUtil.isBlank(spaceAddRequest.getSpaceName())) {
+            spaceAddRequest.setSpaceName("Default space");
+        }
+        if (spaceAddRequest.getSpaceLevel() == null) {
+            spaceAddRequest.setSpaceLevel(SpaceLevelEnum.PERSONAL.getValue());
+        }
+        if (spaceAddRequest.getSpaceType() == null) {
+            spaceAddRequest.setSpaceType(SpaceTypeEnum.PRIVATE.getValue());
+        }
+        // Convert DTO to model object
         Space space = new Space();
         BeanUtils.copyProperties(spaceAddRequest, space);
-        if (StrUtil.isBlank(space.getSpaceName())) {
-            space.setSpaceName("Default space");
-        }
-        if (space.getSpaceLevel() == null) {
-            space.setSpaceLevel(SpaceLevelEnum.PERSONAL.getValue());
-        }
         this.fillSpaceBySpaceLevel(space);
         // 2. Validate parameters
         this.validSpace(space, true);
@@ -176,6 +187,7 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
                 // Check if there exists a space
                 boolean exists = this.lambdaQuery()
                         .eq(Space::getCreatorId, userId)
+                        .eq(Space::getSpaceType, spaceAddRequest.getSpaceType())
                         .exists();
                 ThrowUtils.throwIf(exists, ErrorCode.OPERATION_ERROR, "Only one space can be created");
                 boolean result = this.save(space);

@@ -79,3 +79,23 @@ ALTER TABLE picture
     ADD COLUMN spaceId bigint null comment 'Space ID (null means that the space is public )';
 
 CREATE INDEX  idx_spaceId ON picture (spaceId);
+
+ALTER TABLE space
+    ADD COLUMN spaceType int default 0 not null comment "Space type: 0-private 1-team";
+
+CREATE INDEX idx_spaceType ON space (spaceType);
+
+-- Space-User relation table
+create table if not exists space_user
+(
+    id         bigint auto_increment comment 'id' primary key,
+    spaceId    bigint                                 not null comment 'Space id',
+    userId     bigint                                 not null comment 'User id',
+    role       varchar(128) default 'viewer'          null comment 'User role in this space：viewer/editor/admin',
+    createTime datetime     default CURRENT_TIMESTAMP not null comment 'Create time',
+    updateTime datetime     default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment 'Update time',
+    -- Indexing design
+    UNIQUE KEY uk_spaceId_userId (spaceId, userId), -- Unique index，each user can have only one role in a space
+    INDEX idx_spaceId (spaceId),                    -- Improve query performance on spaceId
+    INDEX idx_userId (userId)                       -- Improve query performance on userId
+) comment 'space_user_relation_table' collate = utf8mb4_unicode_ci;

@@ -69,6 +69,11 @@ public class SpaceVO implements Serializable {
      */
     private Date updateTime;
 
+    /**
+     * Space type: 0-private 1-team
+     */
+    private Integer spaceType;
+
     private UserVO creator;
 
     @Serial

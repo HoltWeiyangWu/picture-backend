@@ -34,6 +34,11 @@ public class SpaceQueryRequest extends PageRequest implements Serializable {
      */
     private Long creatorId;
 
+    /**
+     * Space type: 0-private 1-team
+     */
+    private Integer spaceType;
+
     @Serial
     private static final long serialVersionUID = 1L;
 

@@ -10,15 +10,18 @@ import holt.picture.exception.BusinessException;
 import holt.picture.exception.ErrorCode;
 import holt.picture.exception.ThrowUtils;
 import holt.picture.model.Space;
+import holt.picture.model.SpaceUser;
 import holt.picture.model.User;
 import holt.picture.model.dto.space.SpaceAddRequest;
 import holt.picture.model.dto.space.SpaceQueryRequest;
 import holt.picture.model.enums.SpaceLevelEnum;
+import holt.picture.model.enums.SpaceRoleEnum;
 import holt.picture.model.enums.SpaceTypeEnum;
 import holt.picture.model.vo.SpaceVO;
 import holt.picture.model.vo.UserVO;
 import holt.picture.service.SpaceService;
 import holt.picture.mapper.SpaceMapper;
+import holt.picture.service.SpaceUserService;
 import holt.picture.service.UserService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
@@ -42,6 +45,9 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private SpaceUserService spaceUserService;
 
     @Resource
     private TransactionTemplate transactionTemplate;
@@ -192,6 +198,16 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
                 ThrowUtils.throwIf(exists, ErrorCode.OPERATION_ERROR, "Only one space can be created");
                 boolean result = this.save(space);
                 ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "Failed to save space into database");
+                // If the space is a team space, then record the space-user relation into database
+                if (SpaceTypeEnum.TEAM.getValue().equals(spaceAddRequest.getSpaceType())) {
+                    SpaceUser spaceUser = new SpaceUser();
+                    spaceUser.setId(userId);
+                    spaceUser.setSpaceId(space.getId());
+                    spaceUser.setRole(SpaceRoleEnum.ADMIN.getValue());
+                    result = spaceUserService.save(spaceUser);
+                    ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "Failed to save space-user relation");
+                }
+
                 return space.getId();
             });
             return Optional.ofNullable(newSpaceId).orElse(-1L);

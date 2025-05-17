@@ -11,7 +11,7 @@ import lombok.Getter;
 public enum SpaceTypeEnum {
 
     PRIVATE("Private Space", 0),
-    PUBLIC("Team Space", 1);
+    TEAM("Team Space", 1);
 
     private final String text;
 

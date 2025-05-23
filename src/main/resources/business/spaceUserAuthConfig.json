@@ -1,0 +1,62 @@
+{
+  "permissions": [
+    {
+      "key": "spaceUser:manage",
+      "name": "Manage User",
+      "description": "Manage users in space by adding or deleting"
+    },
+    {
+      "key": "picture:view",
+      "name": "View picture",
+      "description": "View pictures in space"
+    },
+    {
+      "key": "picture:upload",
+      "name": "Upload picture",
+      "description": "Upload pictures to space"
+    },
+    {
+      "key": "picture:edit",
+      "name": "Edit picture",
+      "description": "Edits pictures that are already uploaded"
+    },
+    {
+      "key": "picture:delete",
+      "name": "Delete picture",
+      "description": "Delete pictures in space"
+    }
+  ],
+  "roles": [
+    {
+      "key": "viewer",
+      "name": "Viewer",
+      "permissions": [
+        "picture:view"
+      ],
+      "description": "Permitted to view pictures"
+    },
+    {
+      "key": "editor",
+      "name": "Editor",
+      "permissions": [
+        "picture:view",
+        "picture:upload",
+        "picture:edit",
+        "picture:delete"
+      ],
+      "description": "Permitted to view, upload, edit and delete pictures"
+    },
+    {
+      "key": "admin",
+      "name": "Admin",
+      "permissions": [
+        "spaceUser:manage",
+        "picture:view",
+        "picture:upload",
+        "picture:edit",
+        "picture:delete"
+      ],
+      "description": "Permitted to manage users and to view, upload, edit and delete pictures"
+    }
+  ]
+}

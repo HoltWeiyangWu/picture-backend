@@ -7,6 +7,7 @@ import org.springframework.beans.BeanUtils;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -95,8 +96,15 @@ public class PictureVO implements Serializable {
      */
     private Date updateTime;
 
+    /**
+     * Creator of this picture
+     */
     private UserVO creator;
 
+    /**
+     * A list of access permission of the current object
+     */
+    private List<String> permissionList = new ArrayList<>();
     @Serial
     private static final long serialVersionUID = 1L;
 

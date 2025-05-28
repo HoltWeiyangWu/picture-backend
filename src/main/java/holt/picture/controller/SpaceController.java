@@ -8,6 +8,7 @@ import holt.picture.common.ResultUtils;
 import holt.picture.constant.UserConstant;
 import holt.picture.exception.ErrorCode;
 import holt.picture.exception.ThrowUtils;
+import holt.picture.manager.auth.SpaceUserAuthManager;
 import holt.picture.model.Space;
 import holt.picture.model.User;
 import holt.picture.model.dto.space.*;
@@ -38,6 +39,9 @@ public class SpaceController {
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private SpaceUserAuthManager spaceUserAuthManager;
 
     @PostMapping("/add")
     public BaseResponse<Long> addSpace(@RequestBody SpaceAddRequest spaceAddRequest, HttpServletRequest request) {
@@ -131,7 +135,11 @@ public class SpaceController {
         ThrowUtils.throwIf(id <= 0, ErrorCode.PARAMS_ERROR);
         Space space = spaceService.getById(id);
         ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR);
-        return ResultUtils.success(spaceService.getSpaceVO(space, request));
+        SpaceVO spaceVO = spaceService.getSpaceVO(space, request);
+        User loginUser = userService.getLoginUser(request);
+        List<String> permissionList = spaceUserAuthManager.getPermissionList(space, loginUser);
+        spaceVO.setPermissionList(permissionList);
+        return ResultUtils.success(spaceVO);
     }
 
     /**

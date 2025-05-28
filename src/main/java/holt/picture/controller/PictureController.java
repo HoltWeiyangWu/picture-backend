@@ -13,6 +13,10 @@ import holt.picture.common.ResultUtils;
 import holt.picture.constant.UserConstant;
 import holt.picture.exception.ErrorCode;
 import holt.picture.exception.ThrowUtils;
+import holt.picture.manager.auth.SpaceUserAuthManager;
+import holt.picture.manager.auth.StpKit;
+import holt.picture.manager.auth.annotation.SaSpaceCheckPermission;
+import holt.picture.manager.auth.model.SpaceUserPermissionConstant;
 import holt.picture.model.Picture;
 import holt.picture.model.Space;
 import holt.picture.model.enums.PictureReviewStatusEnum;
@@ -59,6 +63,8 @@ public class PictureController {
     @Resource
     private SpaceService spaceService;
 
+    @Resource
+    private SpaceUserAuthManager spaceUserAuthManager;
     /**
      * Local cache
      */
@@ -73,6 +79,7 @@ public class PictureController {
      * Upload a picture file to AWS S3 and record its information to database
      */
     @PostMapping("/upload")
+    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.PICTURE_UPLOAD)
     public BaseResponse<PictureVO> uploadPicture(
             @RequestPart("file") MultipartFile multipartFile,
             PictureUploadRequest pictureUploadRequest,
@@ -86,6 +93,7 @@ public class PictureController {
      * Upload a picture url to AWS S3 and record its information to database
      */
     @PostMapping("/upload/url")
+    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.PICTURE_UPLOAD)
     public BaseResponse<PictureVO> uploadPictureByUrl(
             @RequestBody PictureUploadRequest pictureUploadRequest,
             HttpServletRequest request) {
@@ -113,6 +121,7 @@ public class PictureController {
      * Delete a picture according to picture id
      */
     @PostMapping("/delete")
+    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.PICTURE_DELETE)
     public BaseResponse<Boolean> deletePicture(@RequestBody DeleteRequest deleteRequest, HttpServletRequest request) {
         ThrowUtils.throwIf(deleteRequest == null || deleteRequest.getId() <= 0, ErrorCode.PARAMS_ERROR);
         User loginUser = userService.getLoginUser(request);
@@ -152,6 +161,7 @@ public class PictureController {
      * Edit a picture (For creator or admin)
      */
     @PostMapping("/edit")
+    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.PICTURE_EDIT)
     public BaseResponse<Boolean> editPicture(@RequestBody PictureEditRequest pictureEditRequest, HttpServletRequest request) {
         ThrowUtils.throwIf(pictureEditRequest == null || pictureEditRequest.getId() <= 0,
                 ErrorCode.PARAMS_ERROR);
@@ -181,11 +191,18 @@ public class PictureController {
         Picture picture = pictureService.getById(id);
         ThrowUtils.throwIf(picture == null, ErrorCode.NOT_FOUND_ERROR);
         Long spaceId = picture.getSpaceId();
+        Space space = null;
         if (spaceId != null) {
-            User loginUser = userService.getLoginUser(request);
-            pictureService.checkPictureAuth(loginUser, picture);
+            boolean hasPermission = StpKit.SPACE.hasPermission(SpaceUserPermissionConstant.PICTURE_VIEW);
+            ThrowUtils.throwIf(!hasPermission, ErrorCode.NO_AUTH_ERROR);
+            space = spaceService.getById(spaceId);
+            ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR, "Space does not exist");
         }
-        return ResultUtils.success(pictureService.getPictureVO(picture, request));
+        User loginUser = userService.getLoginUser(request);
+        List<String> permissionList = spaceUserAuthManager.getPermissionList(space, loginUser);
+        PictureVO pictureVO = pictureService.getPictureVO(picture, request);
+        pictureVO.setPermissionList(permissionList);
+        return ResultUtils.success(pictureVO);
     }
 
     /**
@@ -220,11 +237,8 @@ public class PictureController {
             pictureQueryRequest.setNullSpaceId(true);
         } else {
             // Private space
-            User loginUser = userService.getLoginUser(request);
-            Space space = spaceService.getById(spaceId);
-            ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR, "Storage space not found");
-            boolean isCreator = loginUser.getId().equals(space.getCreatorId());
-            ThrowUtils.throwIf(!isCreator, ErrorCode.NO_AUTH_ERROR, "No auth permission");
+            boolean hasPermission = StpKit.SPACE.hasPermission(SpaceUserPermissionConstant.PICTURE_VIEW);
+            ThrowUtils.throwIf(!hasPermission, ErrorCode.NO_AUTH_ERROR);
         }
         QueryWrapper<Picture> pictureQueryWrapper = pictureService.getPictureQueryWrapper(pictureQueryRequest);
         Page<Picture> picturePage = pictureService.page(new Page<>(current, size),pictureQueryWrapper
@@ -306,6 +320,7 @@ public class PictureController {
     }
 
     @PostMapping("/edit/batch")
+    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.PICTURE_EDIT)
     public BaseResponse<Boolean> editPictureByBatch(@RequestBody PictureEditByBatchRequest pictureEditByBatchRequest, HttpServletRequest request) {
         ThrowUtils.throwIf(pictureEditByBatchRequest == null, ErrorCode.PARAMS_ERROR);
         User loginUser = userService.getLoginUser(request);

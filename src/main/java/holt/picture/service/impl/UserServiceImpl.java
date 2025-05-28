@@ -4,6 +4,7 @@ import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import holt.picture.manager.auth.StpKit;
 import holt.picture.model.dto.user.UserQueryRequest;
 import holt.picture.exception.BusinessException;
 import holt.picture.exception.ErrorCode;
@@ -103,6 +104,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
                 new BusinessException(ErrorCode.PARAMS_ERROR, "User does not exist or incorrect password"));
         // 3. Record user login state
         request.getSession().setAttribute(USER_LOGIN_STATE, user);
+        // 4. Record user login state into Sa-Token for picture space authentication
+        StpKit.SPACE.login(user.getId());
+        StpKit.SPACE.getSession().set(USER_LOGIN_STATE, user);
         return this.getLoginUserVO(user);
     }
 

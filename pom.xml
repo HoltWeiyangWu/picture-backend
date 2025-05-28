@@ -100,7 +100,7 @@
 		<!-- Sa-Token Auth check：https://sa-token.cc -->
 		<dependency>
 			<groupId>cn.dev33</groupId>
-			<artifactId>sa-token-spring-boot-starter</artifactId>
+			<artifactId>sa-token-spring-boot3-starter</artifactId>
 			<version>1.43.0</version>
 		</dependency>
 

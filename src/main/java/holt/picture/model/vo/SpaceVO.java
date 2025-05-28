@@ -6,7 +6,9 @@ import org.springframework.beans.BeanUtils;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 /**
  * @author Weiyang Wu
@@ -73,6 +75,11 @@ public class SpaceVO implements Serializable {
      * Space type: 0-private 1-team
      */
     private Integer spaceType;
+
+    /**
+     * A list of access permission of the current object
+     */
+    private List<String> permissionList = new ArrayList<>();
 
     private UserVO creator;
 

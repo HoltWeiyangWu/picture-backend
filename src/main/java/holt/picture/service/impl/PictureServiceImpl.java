@@ -81,10 +81,6 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         if (spaceId != null) {
             Space space = spaceService.getById(spaceId);
             ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR, "No storage space found");
-            // Check is user is authorised for this space
-            boolean isCreator = loginUser.getId().equals(space.getCreatorId());
-            ThrowUtils.throwIf(!isCreator, ErrorCode.NO_AUTH_ERROR,
-                    "You are not authorized to upload picture to this storage space");
             // Check if there remains any space left
             if (space.getTotalCount() >= space.getMaxCount()) {
                 throw new BusinessException(ErrorCode.OPERATION_ERROR, "Too many pictures in the storage space");
@@ -430,7 +426,6 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         // Check if the picture exists
         Picture picture = this.getById(pictureId);
         ThrowUtils.throwIf(picture == null, ErrorCode.NOT_FOUND_ERROR);
-        checkPictureAuth(loginUser, picture);
 
         transactionTemplate.execute(status -> {
             boolean result = this.removeById(pictureId);
@@ -468,7 +463,6 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         // Check if the picture already exists
         Picture oldPicture = this.getById(id);
         ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR);
-        this.checkPictureAuth(loginUser, oldPicture);
         // Add picture review feature
         this.fillReviewParams(picture, loginUser);
         boolean result = this.updateById(picture);

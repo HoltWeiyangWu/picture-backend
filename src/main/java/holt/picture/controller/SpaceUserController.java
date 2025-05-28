@@ -7,6 +7,8 @@ import holt.picture.common.ResultUtils;
 import holt.picture.exception.BusinessException;
 import holt.picture.exception.ErrorCode;
 import holt.picture.exception.ThrowUtils;
+import holt.picture.manager.auth.annotation.SaSpaceCheckPermission;
+import holt.picture.manager.auth.model.SpaceUserPermissionConstant;
 import holt.picture.model.SpaceUser;
 import holt.picture.model.User;
 import holt.picture.model.dto.spaceuser.SpaceUserAddRequest;
@@ -37,6 +39,7 @@ public class SpaceUserController {
     private UserService userService;
 
     @PostMapping("/add")
+    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.SPACE_USER_MANAGE)
     public BaseResponse<Long> addSpaceUser(@RequestBody SpaceUserAddRequest spaceUserAddRequest) {
         ThrowUtils.throwIf(spaceUserAddRequest == null, ErrorCode.PARAMS_ERROR);
         long newId = spaceUserService.addSpaceUser(spaceUserAddRequest);
@@ -47,6 +50,7 @@ public class SpaceUserController {
      * Delete a spaceUser according to spaceUser id
      */
     @PostMapping("/delete")
+    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.SPACE_USER_MANAGE)
     public BaseResponse<Boolean> deleteSpaceUser(@RequestBody DeleteRequest deleteRequest) {
         ThrowUtils.throwIf(deleteRequest == null || deleteRequest.getId() <= 0, ErrorCode.PARAMS_ERROR);
         long id = deleteRequest.getId();
@@ -64,6 +68,7 @@ public class SpaceUserController {
      * Get all information of a spaceUser
      */
     @PostMapping("/get")
+    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.SPACE_USER_MANAGE)
     public BaseResponse<SpaceUser> getSpaceUser(@RequestBody SpaceUserQueryRequest queryRequest) {
         // Validate inputs
         ThrowUtils.throwIf(queryRequest == null, ErrorCode.PARAMS_ERROR);
@@ -76,6 +81,7 @@ public class SpaceUserController {
     }
 
     @PostMapping("/list")
+    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.SPACE_USER_MANAGE)
     public BaseResponse<List<SpaceUserVO>> listSpaceUser(@RequestBody SpaceUserQueryRequest spaceUserQueryRequest) {
         ThrowUtils.throwIf(spaceUserQueryRequest == null, ErrorCode.PARAMS_ERROR);
         List<SpaceUser> spaceUserList = spaceUserService.list(
@@ -85,6 +91,7 @@ public class SpaceUserController {
     }
 
     @PostMapping("/edit")
+    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.SPACE_USER_MANAGE)
     public BaseResponse<Boolean> editSpaceUser(@RequestBody SpaceUserEditRequest spaceUserEditRequest) {
         if (spaceUserEditRequest == null || spaceUserEditRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);

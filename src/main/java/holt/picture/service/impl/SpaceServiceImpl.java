@@ -201,7 +201,7 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
                 // If the space is a team space, then record the space-user relation into database
                 if (SpaceTypeEnum.TEAM.getValue().equals(spaceAddRequest.getSpaceType())) {
                     SpaceUser spaceUser = new SpaceUser();
-                    spaceUser.setId(userId);
+                    spaceUser.setUserId(userId);
                     spaceUser.setSpaceId(space.getId());
                     spaceUser.setRole(SpaceRoleEnum.ADMIN.getValue());
                     result = spaceUserService.save(spaceUser);

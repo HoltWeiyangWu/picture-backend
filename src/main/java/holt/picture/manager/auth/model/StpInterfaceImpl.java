@@ -98,7 +98,7 @@ public class StpInterfaceImpl implements StpInterface {
             ThrowUtils.throwIf(spaceUser==null, ErrorCode.NOT_FOUND_ERROR,
                     "Can not find space-user relation object");
             SpaceUser loginSpaceUser = spaceUserService.lambdaQuery()
-                    .eq(SpaceUser::getSpaceId, spaceUser.getUserId())
+                    .eq(SpaceUser::getSpaceId, spaceUser.getSpaceId())
                     .eq(SpaceUser::getUserId, userId)
                     .one();
             if (loginSpaceUser == null) {
@@ -169,7 +169,7 @@ public class StpInterfaceImpl implements StpInterface {
         SpaceUserAuthContext authRequest;
 
         // Read GET/POST request parameters
-        if (contentType.equals(ContentType.JSON.getValue())) {
+        if (ContentType.JSON.getValue().equals(contentType)) {
             String body = JakartaServletUtil.getBody(request);
             authRequest = JSONUtil.toBean(body, SpaceUserAuthContext.class);
         } else {

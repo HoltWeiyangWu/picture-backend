@@ -147,6 +147,23 @@ public class UserController {
         return ResultUtils.success(result);
     }
 
+    @PostMapping("/profile")
+    @AuthCheck(requiredRole = UserConstant.USER_ROLE)
+    public BaseResponse<Boolean> editUser(@RequestBody UserEditRequest userEditRequest,
+                                          HttpServletRequest httpRequest) {
+        ThrowUtils.throwIf(userEditRequest==null || userEditRequest.getId()==null,
+                ErrorCode.PARAMS_ERROR);
+        // Validate user identity
+        User loginUser = userService.getLoginUser(httpRequest);
+        ThrowUtils.throwIf(loginUser == null, ErrorCode.NOT_FOUND_ERROR, "User not found");
+        ThrowUtils.throwIf(!userEditRequest.getId().equals(loginUser.getId()), ErrorCode.NO_AUTH_ERROR);
+        User user = new User();
+        BeanUtils.copyProperties(userEditRequest, user);
+        boolean result = userService.updateById(user);
+        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        return ResultUtils.success( result);
+    }
+
     /**
      * Obtain a list of user objects (only to admin)
      */

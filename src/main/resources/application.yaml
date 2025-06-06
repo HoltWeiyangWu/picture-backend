@@ -1,3 +1,6 @@
+server:
+  servlet:
+    context-path: /picloud
 spring:
   application:
     name: picture

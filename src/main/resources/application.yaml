@@ -1,6 +1,10 @@
 server:
   servlet:
     context-path: /picloud
+    session:
+      cookie:
+        same-site: None
+        secure: true
 spring:
   application:
     name: picture

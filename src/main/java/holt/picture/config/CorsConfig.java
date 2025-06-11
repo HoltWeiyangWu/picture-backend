@@ -16,7 +16,7 @@ public class CorsConfig implements WebMvcConfigurer {
         registry.addMapping("/**") // Cover all requests
                 .allowCredentials(true) // Allows for sending cookies
                 // allows for all origins, have to use patterns due to credentials
-                .allowedOrigins("https://www.holtwywpicloud.me","https://picture-frontend-4f3054730c19.herokuapp.com")
+                .allowedOriginPatterns("*")
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*") // For request
                 .exposedHeaders("*"); // For response

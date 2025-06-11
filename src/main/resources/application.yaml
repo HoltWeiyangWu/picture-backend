@@ -6,6 +6,10 @@ server:
         same-site: None
         secure: true
 spring:
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 10MB
   application:
     name: picture
   datasource:
@@ -23,7 +27,6 @@ mybatis-plus:
       logic-delete-field: isDeleted
       logic-delete-value: 1
       logic-not-delete-value: 0
-
 aws:
   s3:
     client:
@@ -31,3 +34,7 @@ aws:
       bucket: ${AWS_BUCKET_NAME}
       access-key: ${AWS_ACCESS_KEY_ID}
       secret-key: ${AWS_SECRET_ACCESS_KEY}
+#sa-token:
+#  cookie:
+#    secure: true
+#    sameSite: None
